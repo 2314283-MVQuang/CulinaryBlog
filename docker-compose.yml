@@ -1,26 +1,95 @@
-# Chạy Culinary Blog bằng Docker — dành cho ai không muốn cài Node.js trên máy.
+# =============================================================================
+#  Culinary Blog — Docker Compose cho môi trường phát triển
 #
-#   docker compose up --build frontend     # build rồi chạy, mở http://localhost:3000
-#   docker compose down                    # dừng và dọn container
+#  Cách dùng thường gặp:
 #
-# LƯU Ý: service này chạy ở chế độ PRODUCTION (next build + next start) nên KHÔNG có
-# hot-reload — sửa code xong phải `--build` lại. Nếu đang code thì dùng `npm run dev`
-# trong thư mục frontend/ sẽ tiện hơn nhiều.
+#    docker compose up -d postgres       # chỉ dựng database (đủ cho backend .NET chạy)
+#    docker compose up -d postgres adminer   # thêm giao diện web xem/sửa dữ liệu
+#    docker compose up --build frontend  # chạy frontend bằng Docker
+#    docker compose down                 # dừng tất cả, GIỮ LẠI dữ liệu
+#    docker compose down -v              # dừng và XOÁ SẠCH dữ liệu database
+#
+#  Các service khác trong tài liệu đặc tả (redis, minio, nginx, seq, mailhog —
+#  mục 6.4) sẽ thêm sau khi backend cần đến, chưa cần lúc này.
+# =============================================================================
 
 services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16 — database chính (mục 6.1)
+  #
+  # Lần đầu khởi động, PostgreSQL tự chạy mọi file .sql trong /docker-entrypoint-initdb.d
+  # theo thứ tự tên file: 01-extensions → 02-schema → 03-seed.
+  #
+  # LƯU Ý: các file đó CHỈ chạy khi volume dữ liệu còn trống. Sửa file .sql rồi
+  # `docker compose up` lại sẽ KHÔNG có tác dụng — phải `docker compose down -v`
+  # để xoá volume rồi dựng lại.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: culinaryblog-postgres
+    environment:
+      POSTGRES_DB: culinaryblog
+      POSTGRES_USER: culinary
+      POSTGRES_PASSWORD: culinary123
+      # Bắt buộc so khớp mật khẩu khi kết nối (mặc định của image alpine là trust).
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # Backend nên đợi healthcheck này xanh rồi mới kết nối.
+      test: ["CMD-SHELL", "pg_isready -U culinary -d culinaryblog"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Adminer — giao diện web để xem/sửa dữ liệu, không phải cài phần mềm gì thêm.
+  # Mở http://localhost:8080 rồi đăng nhập:
+  #     System   : PostgreSQL
+  #     Server   : postgres
+  #     Username : culinary
+  #     Password : culinary123
+  #     Database : culinaryblog
+  # ---------------------------------------------------------------------------
+  adminer:
+    image: adminer:latest
+    container_name: culinaryblog-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Frontend Next.js (tuỳ chọn — nếu không muốn cài Node.js trên máy)
+  #
+  # Chạy ở chế độ PRODUCTION (next build + next start) nên KHÔNG có hot-reload;
+  # sửa code xong phải `docker compose up --build frontend` lại. Đang code thì
+  # dùng `npm run dev` trong thư mục frontend/ sẽ tiện hơn nhiều.
+  # ---------------------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
       args:
-        # Biến NEXT_PUBLIC_* phải có mặt LÚC BUILD vì Next.js nhúng thẳng vào bundle
-        # gửi xuống trình duyệt. Backend chạy ở cổng khác thì sửa dòng này rồi build lại.
+        # Biến NEXT_PUBLIC_* phải có mặt LÚC BUILD vì Next.js nhúng thẳng vào
+        # bundle gửi xuống trình duyệt. Backend đổi cổng thì sửa đây rồi build lại.
         NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api/v1
+    container_name: culinaryblog-frontend
     ports:
       - "3000:3000"
     environment:
-      # Khoá ký cookie phiên đăng nhập của Auth.js. Giá trị dưới đây CHỈ để chạy thử trên
-      # máy cá nhân. Trước khi deploy thật, sinh khoá mới bằng `npx auth secret` rồi đưa vào
-      # biến môi trường AUTH_SECRET của máy chủ (hoặc file .env cạnh docker-compose.yml).
-      AUTH_SECRET: ${AUTH_SECRET:-local-dev-only-chua-phai-khoa-that-hay-doi-truoc-khi-deploy}
+      # Khoá ký cookie phiên đăng nhập của Auth.js. Giá trị dưới đây CHỈ để chạy
+      # thử trên máy cá nhân. Trước khi deploy thật, sinh khoá mới bằng
+      # `npx auth secret` rồi đặt vào biến môi trường AUTH_SECRET của máy chủ.
+      AUTH_SECRET: ${AUTH_SECRET:-local-dev-only-hay-doi-khoa-nay-truoc-khi-deploy}
       NEXTAUTH_URL: http://localhost:3000
     restart: unless-stopped
+
+volumes:
+  pgdata:
