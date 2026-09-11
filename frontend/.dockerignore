@@ -1,0 +1,22 @@
+# Những thứ KHÔNG được copy vào Docker image.
+# Quan trọng nhất là .env*.local — nếu lọt vào image thì khoá bí mật trên máy bạn
+# sẽ bị đóng gói chung và phát tán theo image.
+
+node_modules
+.next
+out
+build
+coverage
+
+.env
+.env*.local
+
+.git
+.gitignore
+Dockerfile
+.dockerignore
+README.md
+
+npm-debug.log*
+*.tsbuildinfo
+.DS_Store

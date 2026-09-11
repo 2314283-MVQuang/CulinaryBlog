@@ -1,0 +1,26 @@
+# Chạy Culinary Blog bằng Docker — dành cho ai không muốn cài Node.js trên máy.
+#
+#   docker compose up --build frontend     # build rồi chạy, mở http://localhost:3000
+#   docker compose down                    # dừng và dọn container
+#
+# LƯU Ý: service này chạy ở chế độ PRODUCTION (next build + next start) nên KHÔNG có
+# hot-reload — sửa code xong phải `--build` lại. Nếu đang code thì dùng `npm run dev`
+# trong thư mục frontend/ sẽ tiện hơn nhiều.
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Biến NEXT_PUBLIC_* phải có mặt LÚC BUILD vì Next.js nhúng thẳng vào bundle
+        # gửi xuống trình duyệt. Backend chạy ở cổng khác thì sửa dòng này rồi build lại.
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api/v1
+    ports:
+      - "3000:3000"
+    environment:
+      # Khoá ký cookie phiên đăng nhập của Auth.js. Giá trị dưới đây CHỈ để chạy thử trên
+      # máy cá nhân. Trước khi deploy thật, sinh khoá mới bằng `npx auth secret` rồi đưa vào
+      # biến môi trường AUTH_SECRET của máy chủ (hoặc file .env cạnh docker-compose.yml).
+      AUTH_SECRET: ${AUTH_SECRET:-local-dev-only-chua-phai-khoa-that-hay-doi-truoc-khi-deploy}
+      NEXTAUTH_URL: http://localhost:3000
+    restart: unless-stopped

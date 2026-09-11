@@ -1,0 +1,225 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   BIẾN CSS TOÀN CỤC
+   Interns: đổi 1 biến ở đây là đổi cả app. Font được nạp bằng next/font trong
+   app/layout.tsx và gán vào 2 biến --font-sans / --font-display.
+   ========================================================================== */
+:root {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
+
+  /* Toạ độ con trỏ chuột (0–100%), được component CursorGlow cập nhật liên tục.
+     Nhờ đó CSS có thể "biết" chuột đang ở đâu mà không cần re-render React. */
+  --cursor-x: 50%;
+  --cursor-y: 50%;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-cream-50 text-neutral-800 antialiased;
+    /* Hoa văn chấm mờ rất nhẹ làm nền, tránh cảm giác "trang trắng trơn". */
+    background-image: radial-gradient(rgba(249, 115, 22, 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Tiêu đề dùng font serif cho ra chất "tạp chí ẩm thực". */
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight text-neutral-900;
+  }
+
+  /* Viền focus thống nhất toàn app — quan trọng cho người dùng bàn phím. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-cream-50;
+  }
+
+  /* Thanh cuộn tông cam cho đồng bộ với theme (Chrome/Edge/Safari). */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-cream-100;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-brand-300;
+    border: 2px solid theme("colors.cream.100");
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-brand-400;
+  }
+
+  /* Bôi đen chữ cũng theo tông cam. */
+  ::selection {
+    @apply bg-brand-200 text-brand-900;
+  }
+}
+
+/* ============================================================================
+   COMPONENT CLASS DÙNG CHUNG
+   ========================================================================== */
+@layer components {
+  /* Giới hạn chiều rộng nội dung, căn giữa — dùng ở hầu hết mọi trang. */
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Chữ tô gradient cam→đỏ, dùng cho từ khoá nổi bật trong tiêu đề lớn.
+     Dùng @apply animate-gradient-x (thay vì viết `animation:` tay) để Tailwind chắc chắn
+     sinh ra @keyframes tương ứng — Tailwind chỉ xuất keyframes khi thấy class được dùng. */
+  .text-gradient {
+    @apply animate-gradient-x bg-brand-gradient bg-clip-text text-transparent;
+    background-size: 200% 200%;
+  }
+
+  /* Thẻ kính mờ — dùng cho header khi cuộn và các chip nổi trên ảnh. */
+  .glass {
+    @apply border border-white/40 bg-white/70 backdrop-blur-xl;
+  }
+
+  /* Card nhấc lên khi hover: đây là hiệu ứng chuột dùng lại nhiều nhất trong app. */
+  .hover-lift {
+    @apply transition-all duration-300 ease-springy;
+  }
+  .hover-lift:hover {
+    @apply -translate-y-1.5 shadow-lift;
+  }
+
+  /* Gạch chân trượt từ trái sang khi hover — dùng cho link trên thanh menu. */
+  .link-underline {
+    @apply relative;
+  }
+  .link-underline::after {
+    content: "";
+    @apply absolute -bottom-1 left-0 h-0.5 w-0 rounded-full bg-brand-gradient transition-all duration-300 ease-springy;
+  }
+  .link-underline:hover::after,
+  .link-underline[data-active="true"]::after {
+    @apply w-full;
+  }
+
+  /* Vệt sáng quét ngang khi hover — gắn class này cho nút/card (cần overflow-hidden). */
+  .shine-on-hover {
+    @apply relative overflow-hidden;
+  }
+  .shine-on-hover::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0 z-10 bg-shine-sweep opacity-0;
+    transform: translateX(-120%);
+  }
+  .shine-on-hover:hover::before {
+    @apply animate-shine opacity-100;
+  }
+
+  /* Khối xám nhấp nháy khi đang tải dữ liệu. */
+  .skeleton {
+    @apply animate-shimmer rounded-lg bg-neutral-200/70;
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.65) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 500px 100%;
+    background-repeat: no-repeat;
+  }
+
+  /* Viền gradient (dùng cho card nổi bật): nền gradient + lớp trắng bên trong. */
+  .gradient-border {
+    @apply relative rounded-card p-px;
+    background: linear-gradient(135deg, #fdba74, #f97316, #ef4444);
+  }
+  .gradient-border > * {
+    @apply rounded-[calc(1rem-1px)] bg-white;
+  }
+}
+
+/* ============================================================================
+   UTILITY BỔ SUNG
+   ========================================================================== */
+@layer utilities {
+  /* Cắt chữ sau N dòng, tránh vỡ layout card khi tiêu đề/mô tả quá dài. */
+  .line-clamp-1,
+  .line-clamp-2,
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-1 {
+    -webkit-line-clamp: 1;
+  }
+  .line-clamp-2 {
+    -webkit-line-clamp: 2;
+  }
+  .line-clamp-3 {
+    -webkit-line-clamp: 3;
+  }
+
+  /* Bật tăng tốc GPU cho phần tử có hiệu ứng di chuyển liên tục — đỡ giật. */
+  .gpu {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* Độ trễ animation — dùng để các card trong lưới hiện lần lượt (stagger). */
+  .delay-0 {
+    animation-delay: 0ms;
+  }
+  .delay-75 {
+    animation-delay: 75ms;
+  }
+  .delay-150 {
+    animation-delay: 150ms;
+  }
+  .delay-225 {
+    animation-delay: 225ms;
+  }
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+  .delay-375 {
+    animation-delay: 375ms;
+  }
+  .delay-450 {
+    animation-delay: 450ms;
+  }
+  .delay-525 {
+    animation-delay: 525ms;
+  }
+
+  /* Nền "vầng sáng theo chuột" — dùng biến --cursor-x/y do CursorGlow cập nhật. */
+  .cursor-spotlight {
+    background: radial-gradient(
+      420px circle at var(--cursor-x) var(--cursor-y),
+      rgba(255, 255, 255, 0.16),
+      transparent 65%
+    );
+  }
+}
+
+/* ============================================================================
+   TÔN TRỌNG NGƯỜI DÙNG TẮT HIỆU ỨNG
+   Một số người bị chóng mặt với animation. Trình duyệt báo qua media query này,
+   ta tắt gần hết chuyển động — đây là yêu cầu bắt buộc về accessibility.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
