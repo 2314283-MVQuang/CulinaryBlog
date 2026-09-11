@@ -1,13 +1,30 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\CulinaryBlog.Domain\CulinaryBlog.Domain.csproj" />
-  </ItemGroup>
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>CulinaryBlog.Application</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- CONS-002: CQRS bắt buộc dùng MediatR. Phiên bản dưới đây là ước lượng tốt nhất tại thời
+         điểm dựng scaffold (môi trường này không có internet để tra NuGet) — nếu `dotnet restore`
+         báo lỗi version, chạy `dotnet add package <Tên> ` để lấy bản mới nhất tương thích net10.0. -->
+    <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="FluentValidation" Version="11.10.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.10.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <!-- Query Handler cần ToListAsync()/Include() trên IQueryable<T> do repository trả về
+         (Query() ở IRepository<T>). Application chỉ dùng các extension method LINQ của EF Core,
+         KHÔNG dùng trực tiếp DbContext hay bất kỳ type nào của Npgsql — Infrastructure vẫn là
+         nơi duy nhất biết PostgreSQL là DBMS. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CulinaryBlog.Domain\CulinaryBlog.Domain.csproj" />
+  </ItemGroup>
 
 </Project>

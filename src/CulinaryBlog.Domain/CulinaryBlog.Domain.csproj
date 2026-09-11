@@ -1,9 +1,21 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>CulinaryBlog.Domain</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      CONS-001 yêu cầu Domain KHÔNG phụ thuộc thư viện ngoài. Đây là NGOẠI LỆ DUY NHẤT,
+      cần thiết vì ApplicationUser kế thừa IdentityUser (mục 6.2 và 7.7 của tài liệu đặc tả
+      liệt kê ApplicationUser là entity của tầng Domain). FrameworkReference tới
+      Microsoft.AspNetCore.App chỉ mang theo các type của ASP.NET Core Identity, không kéo
+      theo bất kỳ logic hạ tầng nào (EF Core, DB...) — vẫn giữ Domain "sạch" về mặt kiến trúc.
+    -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
 </Project>
