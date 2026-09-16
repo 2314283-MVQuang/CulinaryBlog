@@ -1,3 +1,7 @@
+-- Ép UTF-8 cho phiên làm việc: psql trên Windows mặc định dùng WIN1252 nên sẽ báo
+-- "character with byte sequence 0x.. has no equivalent in encoding UTF8" khi gặp tiếng Việt.
+SET client_encoding = 'UTF8';
+
 -- =============================================================================
 --  02 — SCHEMA: tạo toàn bộ bảng theo MỤC 7 của tài liệu đặc tả
 --

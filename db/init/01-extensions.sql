@@ -1,3 +1,7 @@
+-- Ép UTF-8 cho phiên làm việc: psql trên Windows mặc định dùng WIN1252 nên sẽ báo
+-- "character with byte sequence 0x.. has no equivalent in encoding UTF8" khi gặp tiếng Việt.
+SET client_encoding = 'UTF8';
+
 -- =============================================================================
 --  01 — EXTENSIONS & CẤU HÌNH FULL-TEXT SEARCH TIẾNG VIỆT
 --  Chạy đầu tiên. Các file trong thư mục này được PostgreSQL chạy theo thứ tự tên.
