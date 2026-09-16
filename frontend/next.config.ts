@@ -21,6 +21,14 @@ const nextConfig: NextConfig = {
         pathname: "/culinary-blog/**",
       },
       {
+        // Backend .NET khi còn dùng LocalFileStorageService: ảnh nằm trong wwwroot/uploads của
+        // chính API ở cổng 5000. Bỏ mục này đi khi đã chuyển hẳn sang MinIO (FR-FILE-001).
+        protocol: "http",
+        hostname: "localhost",
+        port: "5000",
+        pathname: "/uploads/**",
+      },
+      {
         protocol: "https",
         hostname: "**.amazonaws.com",
       },

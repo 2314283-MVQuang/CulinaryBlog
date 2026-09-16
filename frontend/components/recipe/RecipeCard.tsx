@@ -4,7 +4,7 @@ import { ArrowUpRight, Clock, Users } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { TiltCard } from "@/components/ui/TiltCard";
 import { DifficultyBadge } from "./DifficultyBadge";
-import { formatMinutes } from "@/lib/utils";
+import { formatMinutes, resolveMediaUrl } from "@/lib/utils";
 import type { RecipeSummary } from "@/types/recipe";
 
 /**
@@ -18,6 +18,8 @@ import type { RecipeSummary } from "@/types/recipe";
  */
 export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
   const totalTime = recipe.prepTime + recipe.cookTime;
+  // Ảnh do backend .NET phục vụ tĩnh ở cổng 5000 và trả URL tương đối — phải ghép origin vào.
+  const coverUrl = resolveMediaUrl(recipe.primaryImageUrl);
 
   return (
     <TiltCard maxTilt={7} className="h-full">
@@ -25,9 +27,10 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
         <Card className="group flex h-full flex-col overflow-hidden">
           {/* ----- Ảnh ----- */}
           <div className="relative aspect-[4/3] w-full overflow-hidden bg-brand-50">
-            {recipe.primaryImageUrl ? (
+            {coverUrl ? (
               <Image
-                src={recipe.primaryImageUrl}
+                src={coverUrl}
+                unoptimized
                 alt={recipe.title}
                 fill
                 sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 100vw"
@@ -53,7 +56,7 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
 
             {/* Nhãn danh mục kiểu kính mờ */}
             <span className="absolute right-3 top-3 rounded-full border border-white/40 bg-white/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-brand-700 backdrop-blur-md">
-              {recipe.category.name}
+              {recipe.categoryName}
             </span>
 
             {/* Thời gian nấu — trượt lên khi hover */}

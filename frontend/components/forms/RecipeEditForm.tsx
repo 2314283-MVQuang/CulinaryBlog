@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
-import { IngredientList } from "@/components/recipe/IngredientList";
-import { StepList } from "@/components/recipe/StepList";
+import { ImagesEditor } from "@/components/forms/ImagesEditor";
+import { IngredientsEditor } from "@/components/forms/IngredientsEditor";
+import { StepsEditor } from "@/components/forms/StepsEditor";
 import { StatusBadge } from "@/components/recipe/StatusBadge";
 import { useCategories } from "@/hooks/useCategories";
 import {
@@ -18,7 +19,7 @@ import {
 } from "@/hooks/useRecipes";
 import { recipeBasicInfoSchema, type RecipeBasicInfoValues } from "@/lib/validations/recipe.schema";
 import { DIFFICULTY_LABEL } from "@/lib/utils";
-import { ApiError } from "@/lib/api-client";
+import { ApiError, apiErrorMessage } from "@/lib/api-client";
 import { ApiErrorCode } from "@/types/common";
 import type { RecipeDetail } from "@/types/recipe";
 
@@ -27,9 +28,9 @@ import type { RecipeDetail } from "@/types/recipe";
  * Concurrency: mỗi lần Update đều gửi kèm `recipe.rowVersion` qua header If-Match —
  * nếu người khác vừa sửa trước đó, backend trả 409 và ta báo lỗi thay vì ghi đè âm thầm.
  *
- * Ghi chú cho intern: sửa/xoá TỪNG ingredient hoặc step riêng lẻ (FR-RCP-009/010) chưa được
- * nối dây ở bản khung này — danh sách bên dưới hiện tại chỉ hiển thị read-only. Muốn thêm,
- * làm theo đúng pattern của hooks/useRecipes.ts (thêm hook mới gọi PUT/DELETE endpoint tương ứng).
+ * Ảnh / nguyên liệu / bước (FR-RCP-008/009/010) nằm trong ba editor riêng bên dưới, mỗi editor
+ * tự gọi endpoint của nó rồi invalidate cache — KHÔNG đi qua form này, nên người dùng sửa chúng
+ * mà không cần bấm "Lưu thay đổi".
  */
 export function RecipeEditForm({ recipe }: { recipe: RecipeDetail }) {
   const router = useRouter();
@@ -51,7 +52,7 @@ export function RecipeEditForm({ recipe }: { recipe: RecipeDetail }) {
     defaultValues: {
       title: recipe.title,
       description: recipe.description,
-      categoryId: recipe.category.id,
+      categoryId: recipe.categoryId,
       prepTimeMinutes: recipe.prepTime,
       cookTimeMinutes: recipe.cookTime,
       servings: recipe.servings,
@@ -121,8 +122,10 @@ export function RecipeEditForm({ recipe }: { recipe: RecipeDetail }) {
         </div>
       </div>
       {publishRecipe.isError && (
-        <p className="text-sm text-red-600">
-          Không thể publish — công thức cần có ít nhất 1 bước thực hiện (FR-RCP-005).
+        // Hiển thị nguyên văn lỗi backend: công thức có thể thiếu bước, thiếu nguyên liệu, hoặc
+        // thiếu cả hai — câu chữ cứng sẵn ở đây trước kia chỉ nhắc mỗi "bước" nên gây hiểu nhầm.
+        <p className="rounded-lg bg-spice-50 px-3 py-2 text-sm text-spice-700">
+          Không thể publish — {apiErrorMessage(publishRecipe.error, "vui lòng thử lại.")}
         </p>
       )}
 
@@ -158,13 +161,18 @@ export function RecipeEditForm({ recipe }: { recipe: RecipeDetail }) {
       </form>
 
       <div>
+        <h2 className="mb-3 font-semibold text-neutral-900">Ảnh ({recipe.images.length})</h2>
+        <ImagesEditor recipeId={recipe.id} images={recipe.images} />
+      </div>
+
+      <div>
         <h2 className="mb-3 font-semibold text-neutral-900">Nguyên liệu ({recipe.ingredients.length})</h2>
-        <IngredientList ingredients={recipe.ingredients} />
+        <IngredientsEditor recipeId={recipe.id} ingredients={recipe.ingredients} />
       </div>
 
       <div>
         <h2 className="mb-3 font-semibold text-neutral-900">Các bước thực hiện ({recipe.steps.length})</h2>
-        <StepList steps={recipe.steps} />
+        <StepsEditor recipeId={recipe.id} steps={recipe.steps} />
       </div>
     </div>
   );

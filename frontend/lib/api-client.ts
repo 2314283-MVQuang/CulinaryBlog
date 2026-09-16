@@ -133,3 +133,21 @@ async function safeParseProblem(res: Response): Promise<ProblemDetails> {
     };
   }
 }
+
+/**
+ * Rút thông báo dễ đọc nhất ra khỏi lỗi API.
+ *
+ * Backend trả lỗi validate theo RFC 7807 với `errors` là map field -> mảng thông báo (xem
+ * GlobalExceptionMiddleware). Những thông báo đó cụ thể hơn hẳn `detail` chung chung
+ * ("Một hoặc nhiều trường dữ liệu không hợp lệ."), nên ưu tiên hiển thị chúng — ví dụ khi
+ * upload file giả mạo, người dùng cần thấy "File không hợp lệ: nội dung không phải ảnh…"
+ * chứ không phải câu chung.
+ */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) {
+    const fieldMessages = Object.values(error.errors ?? {}).flat();
+    if (fieldMessages.length > 0) return fieldMessages.join(" ");
+    return error.message || fallback;
+  }
+  return fallback;
+}

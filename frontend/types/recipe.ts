@@ -1,5 +1,3 @@
-import type { Category } from "./category";
-import type { UserProfile } from "./user";
 
 /** Khớp enum RecipeDifficulty (mục 7.2): 1=Easy 2=Medium 3=Hard 4=Expert. */
 export type RecipeDifficulty = "Easy" | "Medium" | "Hard" | "Expert";
@@ -62,16 +60,39 @@ export interface RecipeSummary {
   servings: number;
   difficulty: RecipeDifficulty;
   status: RecipeStatus;
-  category: Pick<Category, "id" | "name" | "slug">;
-  author: Pick<UserProfile, "id" | "displayName" | "avatarUrl">;
+  /**
+   * Backend trả TÊN danh mục/tác giả dạng chuỗi phẳng, không phải object lồng — xem
+   * RecipeListItemDto.cs. Hệ quả: danh sách không có id tác giả (không lọc "của tôi" phía client
+   * được) và không có slug danh mục (không tự dựng link /categories/{slug} được).
+   */
+  categoryName: string;
+  authorDisplayName: string;
   primaryImageUrl: string | null;
   publishedAt: string | null;
-  createdAt: string;
 }
 
-/** Chi tiết đầy đủ 1 recipe, dùng cho GET /recipes/{slug} (mục 8.3, FR-RCP-002). */
-export interface RecipeDetail extends RecipeSummary {
+/**
+ * Chi tiết đầy đủ 1 recipe, dùng cho GET /recipes/{slug} (mục 8.3, FR-RCP-002).
+ *
+ * KHÔNG kế thừa RecipeSummary: bản chi tiết có `categoryId`/`authorId` và mảng `images` đầy đủ,
+ * nhưng lại KHÔNG có `primaryImageUrl` — hai DTO khác nhau thật sự, gộp lại sẽ khai sai kiểu.
+ */
+export interface RecipeDetail {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
   instructions: string;
+  prepTime: number;
+  cookTime: number;
+  servings: number;
+  difficulty: RecipeDifficulty;
+  status: RecipeStatus;
+  categoryId: string;
+  categoryName: string;
+  authorId: string;
+  authorDisplayName: string;
+  publishedAt: string | null;
   nutrition: RecipeNutrition;
   steps: RecipeStep[];
   ingredients: RecipeIngredient[];
@@ -89,13 +110,6 @@ export interface RecipeListParams {
   maxCookTime?: number;
   minServings?: number;
   sort?: string; // vd. "-createdAt", "title", "cookTime"
-  /**
-   * Lọc theo tác giả — dùng ở trang "/dashboard/recipes" (công thức của tôi).
-   * Intern lưu ý: kiểm tra lại với Swagger backend xem param này tên đúng là "authorId" không
-   * trước khi dùng ở production — nếu backend chưa hỗ trợ, useRecipes() vẫn lọc lại phía client
-   * bằng recipe.author.id nên trang vẫn hiển thị đúng dữ liệu (chỉ là tải dư item không cần thiết).
-   */
-  authorId?: string;
 }
 
 /** Query params cho GET /recipes/search (FR-SRCH-001). */
@@ -103,20 +117,70 @@ export interface RecipeSearchParams extends RecipeListParams {
   q: string;
 }
 
-/** Body tạo recipe mới (FR-RCP-003) — trạng thái ban đầu luôn là Draft, server tự set. */
+/**
+ * Body tạo recipe mới (FR-RCP-003) — trạng thái ban đầu luôn là Draft, server tự set.
+ *
+ * Tên field phải khớp record CreateRecipeRequest ở backend: `prepTime`/`cookTime` (KHÔNG phải
+ * `prepTimeMinutes`), và `instructions` là bắt buộc — gửi thiếu thì model binder nhận null rồi
+ * validator trả 422.
+ */
 export interface CreateRecipeInput {
   title: string;
   description: string;
   categoryId: string;
-  prepTimeMinutes: number;
-  cookTimeMinutes: number;
+  prepTime: number;
+  cookTime: number;
   servings: number;
   difficulty: RecipeDifficulty;
-  instructions?: string;
+  instructions: string;
   nutrition?: Partial<RecipeNutrition>;
-  steps?: Array<Pick<RecipeStep, "title" | "description" | "timerMinutes">>;
-  ingredients?: Array<Pick<RecipeIngredient, "name" | "quantity" | "unit" | "notes">>;
+  /**
+   * Khác hẳn POST /recipes/{id}/steps (nơi backend tự đánh số): ở đây CreateRecipeStepInput bắt
+   * buộc có `stepNumber` và validator yêu cầu > 0. Thiếu nó thì nhận 0 rồi trả 422.
+   */
+  steps?: Array<Pick<RecipeStep, "stepNumber" | "title" | "description" | "timerMinutes">>;
+  /** Tương tự, `orderIndex` là bắt buộc (đếm từ 0) chứ không optional như khi thêm lẻ. */
+  ingredients?: Array<Pick<RecipeIngredient, "name" | "quantity" | "unit" | "notes" | "orderIndex">>;
 }
 
 /** Body cập nhật recipe (FR-RCP-004) — mọi field optional vì có thể chỉ sửa 1 phần. */
 export type UpdateRecipeInput = Partial<CreateRecipeInput>;
+
+// ---------------------------------------------------------------------------
+// Body cho các endpoint CRUD từng phần của công thức — phần việc của Quang.
+// Tên field khớp đúng record request trong src/CulinaryBlog.API/Endpoints/RecipesEndpoints.cs;
+// sai một chữ là backend nhận null rồi trả 422, nên đừng đổi tên tuỳ tiện.
+// ---------------------------------------------------------------------------
+
+/** POST /recipes/{id}/steps (FR-RCP-010). StepNumber do backend tự đánh, không gửi lên. */
+export interface AddStepInput {
+  title: string;
+  description: string;
+  timerMinutes?: number | null;
+  imageUrl?: string | null;
+}
+
+/** PUT /recipes/{id}/steps/{stepId} (FR-RCP-010). */
+export interface UpdateStepInput extends AddStepInput {
+  stepNumber?: number | null;
+}
+
+/** POST /recipes/{id}/ingredients (FR-RCP-009). */
+export interface AddIngredientInput {
+  name: string;
+  quantity?: number | null;
+  unit?: string | null;
+  notes?: string | null;
+}
+
+/** PUT /recipes/{id}/ingredients/{ingredientId} (FR-RCP-009). */
+export interface UpdateIngredientInput extends AddIngredientInput {
+  orderIndex?: number | null;
+}
+
+/** PUT /recipes/{id}/images/{imageId} (FR-RCP-008). Không gửi field nào = giữ nguyên field đó. */
+export interface UpdateImageInput {
+  altText?: string | null;
+  isPrimary?: boolean | null;
+  orderIndex?: number | null;
+}

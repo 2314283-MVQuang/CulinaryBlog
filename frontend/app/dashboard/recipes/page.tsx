@@ -5,24 +5,28 @@ import { FilePlus2, PenSquare } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ErrorBlock, LoadingBlock } from "@/components/ui/Spinner";
 import { StatusBadge } from "@/components/recipe/StatusBadge";
-import { useCurrentUser } from "@/hooks/useAuth";
 import { useRecipes } from "@/hooks/useRecipes";
 import { formatDate } from "@/lib/utils";
 
 /**
- * Mục 9: "/dashboard/recipes" — CSR, danh sách công thức CỦA CHÍNH user đang đăng nhập.
- * API GET /recipes không có tài liệu rõ "chỉ trả recipe của tôi", nên ở đây vừa gửi
- * `authorId` (nếu backend hỗ trợ) vừa lọc lại phía client bằng `recipe.author.id` cho chắc.
+ * Mục 9: "/dashboard/recipes" — CSR, danh sách công thức để vào trang chỉnh sửa.
+ *
+ * GIỚI HẠN HIỆN TẠI của GET /recipes (FR-RCP-001, còn TODO ở backend): endpoint chỉ trả
+ * Status=Published, không nhận tham số lọc theo tác giả, và RecipeListItemDto không có id tác giả
+ * nên cũng không lọc lại phía client được. Vì vậy bảng dưới đây là công thức ĐÃ ĐĂNG của mọi
+ * người, và công thức nháp vừa tạo sẽ KHÔNG xuất hiện ở đây — sau khi tạo xong, trình tạo công
+ * thức chuyển thẳng sang trang sửa nên vẫn dùng được.
  */
 export default function DashboardRecipesPage() {
-  const { user } = useCurrentUser();
   const { data, isLoading, isError, refetch } = useRecipes({
-    authorId: user?.id,
     pageSize: 50,
     sort: "-createdAt",
   });
 
-  const myRecipes = (data?.items ?? []).filter((r) => r.author.id === user?.id);
+  const myRecipes = data?.items ?? [];
+
+  // Tiêu đề cột và tên biến giữ nguyên "công thức của tôi" để khỏi phải sửa lại khi backend bổ
+  // sung bộ lọc tác giả; phần thông báo dưới đây nói rõ dữ liệu hiện tại chưa được lọc.
 
   return (
     <div className="flex flex-col gap-6">
@@ -35,6 +39,13 @@ export default function DashboardRecipesPage() {
           </Button>
         </Link>
       </div>
+
+      <p className="rounded-card border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        Bảng này đang liệt kê công thức <strong>đã đăng của mọi người</strong>, chưa lọc theo tác
+        giả — API danh sách (FR-RCP-001) chưa hỗ trợ lọc theo tác giả và cũng chưa trả về công
+        thức nháp. Công thức nháp bạn vừa tạo sẽ không hiện ở đây; bấm &quot;Tạo công thức
+        mới&quot; sẽ chuyển thẳng sang trang chỉnh sửa của nó.
+      </p>
 
       {isLoading && <LoadingBlock />}
       {isError && <ErrorBlock message="Không tải được danh sách công thức." onRetry={() => refetch()} />}
@@ -53,7 +64,7 @@ export default function DashboardRecipesPage() {
                 <th className="px-4 py-3 font-medium">Tên công thức</th>
                 <th className="px-4 py-3 font-medium">Danh mục</th>
                 <th className="px-4 py-3 font-medium">Trạng thái</th>
-                <th className="px-4 py-3 font-medium">Ngày tạo</th>
+                <th className="px-4 py-3 font-medium">Ngày đăng</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
@@ -61,11 +72,11 @@ export default function DashboardRecipesPage() {
               {myRecipes.map((recipe) => (
                 <tr key={recipe.id}>
                   <td className="px-4 py-3 font-medium text-neutral-900">{recipe.title}</td>
-                  <td className="px-4 py-3 text-neutral-600">{recipe.category.name}</td>
+                  <td className="px-4 py-3 text-neutral-600">{recipe.categoryName}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={recipe.status} />
                   </td>
-                  <td className="px-4 py-3 text-neutral-500">{formatDate(recipe.createdAt)}</td>
+                  <td className="px-4 py-3 text-neutral-500">{formatDate(recipe.publishedAt) || "—"}</td>
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/dashboard/recipes/${recipe.slug}/edit`}

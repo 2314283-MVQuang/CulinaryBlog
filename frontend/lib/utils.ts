@@ -43,3 +43,19 @@ export const STATUS_LABEL: Record<string, { label: string; className: string }> 
   Published: { label: "Đã đăng", className: "border-herb-200 bg-herb-50 text-herb-700" },
   Archived: { label: "Đã lưu trữ", className: "border-amber-200 bg-amber-50 text-amber-700" },
 };
+
+/**
+ * Backend trả URL ảnh dạng TƯƠNG ĐỐI ("/uploads/recipes/.../abc.png" — xem LocalFileStorageService).
+ * Frontend chạy ở cổng 3000 còn file nằm ở cổng 5000, nên dán thẳng vào <Image src> sẽ ra 404.
+ * Hàm này ghép thêm origin của backend; URL tuyệt đối (sau này khi chuyển sang MinIO) giữ nguyên.
+ */
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000/api/v1").replace(
+  /\/api\/v\d+\/?$/,
+  "",
+);
+
+export function resolveMediaUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${API_ORIGIN}${url.startsWith("/") ? "" : "/"}${url}`;
+}
