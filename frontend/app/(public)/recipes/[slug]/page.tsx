@@ -7,8 +7,9 @@ import { DifficultyBadge } from "@/components/recipe/DifficultyBadge";
 import { IngredientList } from "@/components/recipe/IngredientList";
 import { StepList } from "@/components/recipe/StepList";
 import { NutritionTable } from "@/components/recipe/NutritionTable";
-import { formatMinutes } from "@/lib/utils";
+import { formatMinutes, resolveMediaUrl } from "@/lib/utils";
 import type { RecipeDetail } from "@/types/recipe";
+import type { Category } from "@/types/category";
 import type { Metadata } from "next";
 
 // Mục 9: "/recipes/[slug]" — ISR revalidate=300 (5 phút).
@@ -16,6 +17,25 @@ export const revalidate = 300;
 
 interface RecipePageProps {
   params: Promise<{ slug: string }>;
+}
+
+/**
+ * Bản chi tiết KHÔNG có sẵn primaryImageUrl như bản danh sách — phải tự chọn từ mảng images:
+ * ưu tiên ảnh được đánh dấu đại diện, không có thì lấy ảnh đầu tiên.
+ */
+/** Tra slug danh mục từ id. Lỗi mạng thì trả null và trang hiển thị tên danh mục không kèm link. */
+async function getCategorySlug(categoryId: string): Promise<string | null> {
+  try {
+    const categories = await apiFetch<Category[]>("/categories", { next: { revalidate } });
+    return categories.find((category) => category.id === categoryId)?.slug ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function getCoverUrl(recipe: RecipeDetail): string | null {
+  const primary = recipe.images.find((image) => image.isPrimary) ?? recipe.images[0];
+  return resolveMediaUrl(primary?.originalUrl);
 }
 
 async function getRecipe(slug: string): Promise<RecipeDetail | null> {
@@ -32,6 +52,8 @@ export async function generateMetadata({ params }: RecipePageProps): Promise<Met
   const recipe = await getRecipe(slug);
   if (!recipe) return { title: "Không tìm thấy công thức" };
 
+  const cover = getCoverUrl(recipe);
+
   // Mục 5.7 SEO: title <=60 ký tự, meta description 150-160 ký tự, Open Graph đầy đủ.
   return {
     title: recipe.title,
@@ -39,7 +61,7 @@ export async function generateMetadata({ params }: RecipePageProps): Promise<Met
     openGraph: {
       title: recipe.title,
       description: recipe.description.slice(0, 160),
-      images: recipe.primaryImageUrl ? [{ url: recipe.primaryImageUrl, width: 1200, height: 630 }] : undefined,
+      images: cover ? [{ url: cover, width: 1200, height: 630 }] : undefined,
       type: "article",
     },
   };
@@ -51,6 +73,11 @@ export default async function RecipeDetailPage({ params }: RecipePageProps) {
   if (!recipe) notFound();
 
   const totalTime = recipe.prepTime + recipe.cookTime;
+  const cover = getCoverUrl(recipe);
+
+  // Bản chi tiết chỉ có categoryId + categoryName, không có slug danh mục, mà route danh mục lại
+  // là "/categories/[slug]". Nạp danh sách danh mục (nhỏ, đã cache ISR) rồi tra ngược ra slug.
+  const categorySlug = await getCategorySlug(recipe.categoryId);
 
   // JSON-LD Schema.org Recipe markup (mục 5.7) — giúp Google hiển thị Rich Results
   // (ảnh, thời gian nấu, đánh giá...) ngay trên trang kết quả tìm kiếm.
@@ -59,9 +86,9 @@ export default async function RecipeDetailPage({ params }: RecipePageProps) {
     "@type": "Recipe",
     name: recipe.title,
     description: recipe.description,
-    image: recipe.primaryImageUrl ? [recipe.primaryImageUrl] : undefined,
-    author: { "@type": "Person", name: recipe.author.displayName },
-    datePublished: recipe.publishedAt ?? recipe.createdAt,
+    image: cover ? [cover] : undefined,
+    author: { "@type": "Person", name: recipe.authorDisplayName },
+    datePublished: recipe.publishedAt ?? undefined,
     prepTime: `PT${recipe.prepTime}M`,
     cookTime: `PT${recipe.cookTime}M`,
     totalTime: `PT${totalTime}M`,
@@ -92,12 +119,13 @@ export default async function RecipeDetailPage({ params }: RecipePageProps) {
 
       {/* ---------- Ảnh bìa + tiêu đề đè lên ảnh ---------- */}
       <header className="relative isolate overflow-hidden bg-brand-gradient">
-        {recipe.primaryImageUrl && (
+        {cover && (
           <Image
-            src={recipe.primaryImageUrl}
+            src={cover}
             alt={recipe.title}
             fill
             priority
+            unoptimized
             sizes="100vw"
             className="object-cover"
           />
@@ -116,18 +144,22 @@ export default async function RecipeDetailPage({ params }: RecipePageProps) {
               Danh mục
             </Link>
             <ChevronRight className="h-3.5 w-3.5" />
-            <Link
-              href={`/categories/${recipe.category.slug}`}
-              className="truncate transition-colors hover:text-white"
-            >
-              {recipe.category.name}
-            </Link>
+            {categorySlug ? (
+              <Link
+                href={`/categories/${categorySlug}`}
+                className="truncate transition-colors hover:text-white"
+              >
+                {recipe.categoryName}
+              </Link>
+            ) : (
+              <span className="truncate">{recipe.categoryName}</span>
+            )}
           </nav>
 
           <div className="flex animate-fade-up flex-wrap items-center gap-3" style={{ animationDelay: "60ms" }}>
             <DifficultyBadge difficulty={recipe.difficulty} />
             <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white backdrop-blur-md">
-              {recipe.category.name}
+              {recipe.categoryName}
             </span>
           </div>
 
@@ -152,7 +184,7 @@ export default async function RecipeDetailPage({ params }: RecipePageProps) {
               <ChefHat className="h-4 w-4" />
             </span>
             <span>
-              Công thức bởi <strong className="font-semibold text-white">{recipe.author.displayName}</strong>
+              Công thức bởi <strong className="font-semibold text-white">{recipe.authorDisplayName}</strong>
             </span>
           </div>
         </div>

@@ -8,4 +8,17 @@ namespace CulinaryBlog.Domain.Interfaces;
 public interface IUnitOfWork
 {
     Task<int> SaveChangesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Chạy nhiều lần SaveChangesAsync trong CÙNG một transaction — hoặc tất cả cùng thành công,
+    /// hoặc DB quay về y như trước khi gọi.
+    ///
+    /// Vì sao cần: một vài thao tác buộc phải lưu làm nhiều lần để không vi phạm ràng buộc UNIQUE
+    /// của PostgreSQL (đánh số lại các bước nấu, đổi ảnh đại diện — xem RecipeStepNumbering).
+    /// Nếu để mỗi lần lưu là một transaction riêng, sự cố giữa chừng sẽ để lại dữ liệu dở dang
+    /// (các bước mang số tạm, hoặc công thức không còn ảnh đại diện nào).
+    ///
+    /// LƯU Ý: không gọi lồng nhau — bên trong action đừng gọi lại ExecuteInTransactionAsync.
+    /// </summary>
+    Task ExecuteInTransactionAsync(Func<Task> action, CancellationToken ct = default);
 }

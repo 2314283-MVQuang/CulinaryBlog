@@ -28,6 +28,11 @@ public static class DependencyInjection
         services.AddScoped<IRecipeRepository, RecipeRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
+        // Repository generic cho các entity con (RecipeStep/RecipeIngredient/RecipeImage): Handler
+        // chỉ cần Remove()/AddAsync() một dòng con nên không đáng viết repository chuyên biệt cho
+        // từng loại. Đăng ký open generic: xin IRepository<RecipeStep> sẽ nhận RepositoryBase<RecipeStep>.
+        services.AddScoped(typeof(IRepository<>), typeof(RepositoryBase<>));
+
         // --- ASP.NET Core Identity (CONS-004: PBKDF2, mục 5.2: policy mật khẩu + khóa 5 lần sai) ---
         services
             .AddIdentityCore<ApplicationUser>(options =>

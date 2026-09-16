@@ -43,19 +43,26 @@ export function RecipeWizardForm() {
       title: basicInfo.title,
       description: basicInfo.description,
       categoryId: basicInfo.categoryId,
-      prepTimeMinutes: basicInfo.prepTimeMinutes,
-      cookTimeMinutes: basicInfo.cookTimeMinutes,
+      prepTime: basicInfo.prepTimeMinutes,
+      cookTime: basicInfo.cookTimeMinutes,
       servings: basicInfo.servings,
       difficulty: basicInfo.difficulty,
+      // Backend bắt buộc có Instructions (không nullable). Form hiện chưa có ô riêng cho phần
+      // này, nên tạm dùng mô tả ngắn để request không bị 422; thêm ô riêng khi làm FR-RCP-004.
+      instructions: basicInfo.description,
       // Zod trả về `undefined` cho field bỏ trống, còn DTO của backend (mục 7.3/7.4) dùng `null`.
       // Đổi undefined -> null ở đây để JSON gửi đi đúng chuẩn API, không phải bỏ hẳn key.
-      ingredients: ingredients.map((item) => ({
+      ingredients: ingredients.map((item, index) => ({
         name: item.name,
         quantity: item.quantity ?? null,
         unit: item.unit ?? null,
         notes: item.notes ?? null,
+        // OrderIndex đếm từ 0, khớp DEFAULT 0 của cột trong db/init/02-schema.sql.
+        orderIndex: index,
       })),
-      steps: steps.map((step) => ({
+      steps: steps.map((step, index) => ({
+        // StepNumber đếm từ 1 và validator bắt buộc > 0 — xem CreateRecipeStepInput ở backend.
+        stepNumber: index + 1,
         title: step.title,
         description: step.description,
         timerMinutes: step.timerMinutes ?? null,

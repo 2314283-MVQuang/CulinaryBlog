@@ -5,6 +5,7 @@
 #
 #    docker compose up -d postgres       # chỉ dựng database (đủ cho backend .NET chạy)
 #    docker compose up -d postgres adminer   # thêm giao diện web xem/sửa dữ liệu
+#    docker compose up --build api       # chạy backend .NET trong container
 #    docker compose up --build frontend  # chạy frontend bằng Docker
 #    docker compose down                 # dừng tất cả, GIỮ LẠI dữ liệu
 #    docker compose down -v              # dừng và XOÁ SẠCH dữ liệu database
@@ -67,6 +68,45 @@ services:
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
+  # Backend .NET — CulinaryBlog.API
+  #
+  #     docker compose up --build api
+  #
+  # Dùng khi không chạy được `dotnet run` trên Windows, ví dụ bị Smart App Control
+  # chặn file .dll tự build (lỗi 0x800711C7) — trong container Linux thì chính sách
+  # đó không áp dụng. Sửa code C# xong phải thêm cờ --build để dựng lại image.
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      # Context PHẢI là gốc repo vì Dockerfile cần cả 4 project trong src/.
+      context: .
+      dockerfile: src/CulinaryBlog.API/Dockerfile
+    container_name: culinaryblog-api
+    # Mở ra cổng 5000 để giữ nguyên http://localhost:5000 y như lúc chạy dotnet run,
+    # nhờ vậy frontend và Scalar UI không phải sửa gì.
+    ports:
+      - "5000:8080"
+    environment:
+      # Development để bật Scalar UI tại /scalar (xem Program.cs).
+      ASPNETCORE_ENVIRONMENT: Development
+      # Trong container, "localhost" trỏ về chính container này chứ không phải máy
+      # thật, nên phải gọi PostgreSQL bằng tên service là "postgres".
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=culinaryblog;Username=culinary;Password=culinary123"
+      # Jwt:Secret bình thường nằm trong User Secrets của máy dev, mà User Secrets
+      # KHÔNG được copy vào image — không truyền vào đây thì API chết lúc đăng nhập.
+      # Giá trị mặc định dưới đây CHỈ để chạy thử trên máy cá nhân; deploy thật thì
+      # đặt biến môi trường JWT_SECRET bằng khoá ngẫu nhiên từ 32 ký tự trở lên.
+      Jwt__Secret: ${JWT_SECRET:-local-dev-only-hay-doi-khoa-nay-truoc-khi-deploy}
+    volumes:
+      # Giữ lại ảnh đã upload sau mỗi lần dựng lại image. LocalFileStorageService ghi
+      # vào "wwwroot/uploads", trong container là /app/wwwroot/uploads.
+      - uploads:/app/wwwroot/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
   # Frontend Next.js (tuỳ chọn — nếu không muốn cài Node.js trên máy)
   #
   # Chạy ở chế độ PRODUCTION (next build + next start) nên KHÔNG có hot-reload;
@@ -93,3 +133,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:

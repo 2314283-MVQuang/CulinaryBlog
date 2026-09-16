@@ -17,13 +17,15 @@ import type { RecipeStatus } from "@/types/recipe";
 export default function DashboardOverviewPage() {
   const { user, isAdmin } = useCurrentUser();
   const { data, isLoading, isError, refetch } = useRecipes({
-    authorId: user?.id,
     pageSize: 100,
     sort: "-createdAt",
   });
 
-  const myRecipes = (data?.items ?? []).filter((r) => r.author.id === user?.id);
-  const countByStatus = (status: RecipeStatus) => myRecipes.filter((r) => r.status === status).length;
+  // GET /recipes (FR-RCP-001) chưa có tham số lọc theo tác giả và cũng không trả về id tác giả
+  // trong RecipeListItemDto, nên KHÔNG thể lọc "của tôi" — cả ở server lẫn ở client. Endpoint
+  // này hiện cũng chỉ trả Status=Published, vì vậy hai ô Draft/Archived dưới đây luôn bằng 0.
+  const recipes = data?.items ?? [];
+  const countByStatus = (status: RecipeStatus) => recipes.filter((r) => r.status === status).length;
 
   return (
     <div className="flex flex-col gap-8">
