@@ -14,7 +14,13 @@ namespace CulinaryBlog.Domain.Common;
 /// </summary>
 public abstract class BaseEntity
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    /// <summary>
+    /// KHÔNG gán sẵn Guid.NewGuid() ở đây. EF Core quyết định một entity tìm thấy qua navigation
+    /// là hàng MỚI hay hàng CŨ dựa trên việc khoá chính đã có giá trị hay chưa; gán sẵn Id khiến
+    /// "recipe.Ingredients.Add(...)" bị hiểu là Modified rồi sinh ra UPDATE thay vì INSERT.
+    /// Để trống thì EF tự sinh Guid lúc Add (cột trong DB cũng có DEFAULT gen_random_uuid()).
+    /// </summary>
+    public Guid Id { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 
