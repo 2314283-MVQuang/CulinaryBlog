@@ -4,12 +4,13 @@ using CulinaryBlog.Application.Features.Auth.Commands.Login;
 using CulinaryBlog.Application.Features.Auth.Commands.Logout;
 using CulinaryBlog.Application.Features.Auth.Commands.Refresh;
 using CulinaryBlog.Application.Features.Auth.Commands.Register;
+using CulinaryBlog.Application.Features.Auth.Commands.UpdateProfile;
 using CulinaryBlog.Application.Features.Auth.Queries.Me;
 using MediatR;
 
 namespace CulinaryBlog.API.Endpoints;
 
-/// <summary>Mục 8.1. TODO (nhóm làm tiếp): /auth/google (FR-AUTH-003) và PATCH /auth/me (FR-AUTH-007) chưa triển khai.</summary>
+/// <summary>Mục 8.1. TODO (nhóm làm tiếp): /auth/google (FR-AUTH-003) chưa triển khai.</summary>
 public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
@@ -44,8 +45,21 @@ public static class AuthEndpoints
 
         group.MapGet("/me", async (ClaimsPrincipal user, ISender sender) =>
         {
-            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub")!;
-            var result = await sender.Send(new GetMeQuery(userId));
+            var result = await sender.Send(new GetMeQuery(user.GetUserId()));
+            return result.ToOkResponse();
+        }).RequireAuthorization();
+
+        // FR-AUTH-007 — chỉ sửa được hồ sơ của CHÍNH MÌNH: UserId lấy từ JWT, không nhận từ body.
+        // Field nào không gửi (null) thì giữ nguyên; gửi chuỗi rỗng cho AvatarUrl/Bio = xoá giá trị cũ.
+        group.MapPatch("/me", async (UpdateProfileRequest request, ClaimsPrincipal user, ISender sender) =>
+        {
+            var command = new UpdateProfileCommand(
+                user.GetUserId(),
+                request.DisplayName,
+                request.AvatarUrl,
+                request.Bio);
+
+            var result = await sender.Send(command);
             return result.ToOkResponse();
         }).RequireAuthorization();
     }
@@ -53,4 +67,7 @@ public static class AuthEndpoints
     private record LoginRequest(string Email, string Password);
 
     private record RefreshRequest(string RefreshToken);
+
+    /// <summary>Body cho PATCH /auth/me — KHÔNG có UserId (chống sửa hồ sơ người khác).</summary>
+    private record UpdateProfileRequest(string? DisplayName, string? AvatarUrl, string? Bio);
 }

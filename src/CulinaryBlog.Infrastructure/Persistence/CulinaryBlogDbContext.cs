@@ -48,6 +48,18 @@ public class CulinaryBlogDbContext(DbContextOptions<CulinaryBlogDbContext> optio
         builder.Entity<RecipeImage>().HasQueryFilter(x => !x.IsDeleted);
     }
 
+    /// <inheritdoc />
+    public async Task ExecuteInTransactionAsync(Func<Task> action, CancellationToken ct = default)
+    {
+        await using var transaction = await Database.BeginTransactionAsync(ct);
+
+        await action();
+
+        await transaction.CommitAsync(ct);
+        // Không cần Rollback thủ công: nếu action ném exception thì CommitAsync không chạy, và
+        // transaction.DisposeAsync() (do "await using") tự rollback phần đã làm dở.
+    }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         // AuditInterceptor (mục 6.2): tự set CreatedAt/UpdatedAt khi SaveChanges — xem file

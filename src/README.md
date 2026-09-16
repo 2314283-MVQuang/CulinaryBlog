@@ -59,9 +59,11 @@ Mở `http://localhost:5000/scalar` để xem và thử API (Scalar UI, thay cho
 | Module | Đã làm |
 |---|---|
 | **Kiến trúc** | Đủ 4 tầng, CQRS/MediatR, Pipeline Behavior (Logging + Validation), FluentValidation, EF Core Code-First, RFC 7807 error response, named authorization policy |
-| **Auth** | Register, Login (khóa 5 lần sai), Refresh (Token Rotation + Reuse Detection), Logout, Me — JWT HS256 15 phút, PBKDF2 qua Identity |
+| **Auth** | Register, Login (khóa 5 lần sai), Refresh (Token Rotation + Reuse Detection), Logout, Me, **PATCH /me cập nhật hồ sơ (FR-AUTH-007)** — JWT HS256 15 phút, PBKDF2 qua Identity |
 | **Categories** | GET danh sách (kèm số recipe Published), POST tạo mới (Admin, tự sinh slug) |
 | **Recipes** | GET danh sách (phân trang/lọc/sắp xếp), GET chi tiết theo slug, POST tạo mới (Draft, kèm steps/ingredients) |
+| **Recipes – trạng thái** | **PATCH publish / unpublish / archive (FR-RCP-005/006)** — publish bắt buộc có ≥1 bước và ≥1 nguyên liệu, PublishedAt chỉ set lần đầu |
+| **Recipes – nội dung** | **CRUD riêng lẻ ảnh / nguyên liệu / bước (FR-RCP-008/009/010)** — upload ảnh ≤5MB, chọn ảnh đại diện, tự đánh số lại các bước khi xoá |
 | **Database** | Entity + EF Core Configuration khớp CHÍNH XÁC với `db/init/02-schema.sql` đã có sẵn |
 
 ## 4. Chưa có gì — việc còn lại cho cả nhóm (chia theo FR code trong tài liệu đặc tả)
@@ -70,10 +72,9 @@ Mỗi mục dưới đây có `TODO` comment ngay tại vị trí liên quan tro
 `grep -rn "TODO" src/` để thấy hết.
 
 - **FR-AUTH-003** Google OAuth 2.0 — chưa có endpoint `/auth/google`.
-- **FR-AUTH-007** `PATCH /auth/me` cập nhật profile — chưa có.
 - **FR-CAT-002/004/005** Chi tiết danh mục kèm recipe, sửa, xóa (kiểm tra `HasRecipesAsync` → 409) — chưa có. `ICategoryRepository.HasRecipesAsync` đã viết sẵn, chỉ cần dùng.
-- **FR-RCP-004/005/006/007** Update (cần header `If-Match` + `RecipeAuthorizationHandler` cho Resource-Based Authorization), Publish/Unpublish, Archive, Delete (hard delete) — chưa có.
-- **FR-RCP-008/009/010** CRUD ảnh, nguyên liệu, bước riêng lẻ sau khi đã tạo recipe — chưa có (tạo kèm lúc POST /recipes thì đã có).
+- **FR-RCP-004** Update recipe (cần header `If-Match` cho optimistic concurrency) — chưa có. Phần kiểm tra quyền đã có sẵn: gọi `RecipeAuthorization.EnsureCanModify(...)` như các Handler khác.
+- **FR-RCP-007** Delete recipe (hard delete, nhớ xoá luôn file ảnh qua `IFileStorageService`) — chưa có.
 - **FR-SRCH-001** Full-Text Search (`GET /recipes/search`) — chưa có, cột `SearchVector` + trigger đã có sẵn ở DB (`db/init/02-schema.sql`), chỉ cần viết Query dùng `EF.Functions.ToTsQuery` / raw SQL tham số hóa.
 - **Redis** — chưa tích hợp. `CachingBehavior`/`CacheInvalidationBehavior` (mục 6.3) chưa viết, category/recipe đang query thẳng DB mỗi lần.
 - **MinIO** — chưa tích hợp. `IFileStorageService` đã có interface chuẩn, bản hiện tại (`LocalFileStorageService`) lưu vào đĩa cục bộ tạm thời. Viết `MinioFileStorageService` implement cùng interface rồi đổi 1 dòng DI.
@@ -97,5 +98,14 @@ Mỗi mục dưới đây có `TODO` comment ngay tại vị trí liên quan tro
   mục cuối `db/README.md` trước — chạy song song cả hai cách sẽ lỗi "bảng đã tồn tại".
 - **Response mọi API bọc trong `{ "data": ..., "meta": ... }`** (mục 8) — dùng
   `ApiResponseExtensions.ToOkResponse()` / `.ToPagedResponse()`, không tự viết `Results.Ok(...)` thủ công.
+- **Hai lần `SaveChanges` liên tiếp là CỐ Ý, đừng gộp lại thành một.** Bảng `RecipeSteps` có
+  `UNIQUE("RecipeId","StepNumber")` và `RecipeImages` có partial unique index chỉ cho 1 ảnh
+  `IsPrimary` — PostgreSQL kiểm tra ngay sau từng câu UPDATE, nên phải tắt giá trị cũ (lưu) rồi
+  mới bật giá trị mới (lưu). Đọc `RecipeStepNumbering.cs` để hiểu mẹo hai pha; các đoạn này đều
+  bọc trong `IUnitOfWork.ExecuteInTransactionAsync` nên vẫn đảm bảo all-or-nothing.
+- **Quyền sửa công thức gọi `RecipeAuthorization.EnsureCanModify`**, không tự viết lại điều kiện
+  `recipe.AuthorId == userId || isAdmin` ở từng Handler.
+- **Quy ước body PUT cho entity con** (bước/nguyên liệu/ảnh): các field nội dung gửi `null` nghĩa
+  là XOÁ giá trị cũ, riêng `stepNumber`/`orderIndex`/`isPrimary` gửi `null` nghĩa là GIỮ NGUYÊN.
 - **Không hardcode role string** — dùng `AuthorizationPolicies.Admin` / `.Author`
   (`API/Extensions/AuthorizationPolicies.cs`), không viết `.RequireAuthorization("Admin")` trực tiếp.
