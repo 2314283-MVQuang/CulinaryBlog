@@ -1,4 +1,5 @@
 using CulinaryBlog.Application.Common.Exceptions;
+using CulinaryBlog.Application.Common.Helpers;
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.Features.Recipes.Common;
 using CulinaryBlog.Application.Features.Recipes.Dtos;
@@ -21,6 +22,8 @@ public class UploadRecipeImageCommandHandler(
 
         // Kiểm tra quyền TRƯỚC khi ghi file: tránh việc người không có quyền vẫn kịp đẩy file rác lên đĩa.
         RecipeAuthorization.EnsureCanModify(recipe, request.UserId, request.IsAdmin);
+
+        await EnsureContentIsRealImageAsync(request, ct);
 
         var originalUrl = await fileStorage.UploadAsync(
             request.Content,
@@ -46,5 +49,35 @@ public class UploadRecipeImageCommandHandler(
         await unitOfWork.SaveChangesAsync(ct);
 
         return RecipeMapper.ToDto(image);
+    }
+
+    /// <summary>
+    /// FR-RCP-008 bước 4. UploadRecipeImageCommandValidator mới chỉ kiểm được phần client KHAI BÁO
+    /// (Content-Type, dung lượng); ở đây đọc magic bytes của file thật rồi đối chiếu, nên phải đặt
+    /// trong Handler — chỗ duy nhất chạm được vào Stream sau khi ValidationBehavior đã qua.
+    ///
+    /// Ném ValidationException để đồng nhất với các lỗi file khác của endpoint này (cùng ra 422).
+    /// Lưu ý: SRS mục A1–A3 ghi 400 Bad Request cho cả ba lỗi file — xem ghi chú ở
+    /// UploadRecipeImageCommandValidator, cần nhóm thống nhất rồi đổi một lượt.
+    /// </summary>
+    private static async Task EnsureContentIsRealImageAsync(UploadRecipeImageCommand request, CancellationToken ct)
+    {
+        var actualType = await ImageSignatureHelper.DetectMimeTypeAsync(request.Content, ct);
+
+        if (actualType is null)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["file"] = ["File không hợp lệ: nội dung không phải ảnh JPEG, PNG, WebP hay AVIF."],
+            });
+        }
+
+        if (!string.Equals(actualType, request.ContentType, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["file"] = [$"File không hợp lệ: khai báo là {request.ContentType} nhưng nội dung thực tế là {actualType}."],
+            });
+        }
     }
 }

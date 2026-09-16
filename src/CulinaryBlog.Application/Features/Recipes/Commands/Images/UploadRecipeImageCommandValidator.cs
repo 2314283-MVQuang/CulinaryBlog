@@ -5,9 +5,12 @@ namespace CulinaryBlog.Application.Features.Recipes.Commands.Images;
 /// <summary>
 /// CONS-007: chỉ nhận ảnh, tối đa 5MB.
 ///
-/// TODO (nhóm làm tiếp): đây mới là kiểm tra phần "khai báo" (Content-Type + dung lượng do client
-/// gửi lên) nên vẫn giả mạo được. Khi làm MinioFileStorageService, kiểm tra thêm magic bytes của
-/// file thật (vài byte đầu: JPEG bắt đầu FF D8 FF, PNG 89 50 4E 47...) trước khi lưu.
+/// Đây mới là phần client KHAI BÁO (Content-Type + dung lượng) nên tự nó giả mạo được. Phần đối
+/// chiếu magic bytes của file thật (FR-RCP-008 bước 4) nằm ở UploadRecipeImageCommandHandler, vì
+/// chỉ Handler mới chạm được vào Stream.
+///
+/// TODO (nhóm thống nhất): SRS mục A1–A3 của FR-RCP-008 ghi 400 Bad Request cho lỗi file, nhưng
+/// ValidationException của dự án luôn ra 422. Chọn một rồi sửa cả ba chỗ cho đồng nhất.
 /// </summary>
 public class UploadRecipeImageCommandValidator : AbstractValidator<UploadRecipeImageCommand>
 {
@@ -19,6 +22,7 @@ public class UploadRecipeImageCommandValidator : AbstractValidator<UploadRecipeI
         "image/jpeg",
         "image/png",
         "image/webp",
+        "image/avif",
     ];
 
     public UploadRecipeImageCommandValidator()
@@ -32,7 +36,7 @@ public class UploadRecipeImageCommandValidator : AbstractValidator<UploadRecipeI
 
         RuleFor(x => x.ContentType)
             .Must(type => AllowedContentTypes.Contains(type, StringComparer.OrdinalIgnoreCase))
-            .WithMessage("Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP.");
+            .WithMessage("Chỉ chấp nhận ảnh JPEG, PNG, WebP hoặc AVIF.");
 
         RuleFor(x => x.SizeInBytes)
             .GreaterThan(0).WithMessage("File ảnh rỗng.")
