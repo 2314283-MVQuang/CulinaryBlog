@@ -48,6 +48,9 @@ builder.Services
 
 builder.Services.AddAuthorization(options => options.AddCulinaryBlogPolicies());
 
+// FR-OBS-003: Rate limiting cho các endpoint đăng nhập / đăng ký
+builder.Services.AddAuthRateLimiter(builder.Configuration);
+
 // TODO (nhóm làm tiếp): CORS hiện cho phép origin frontend từ appsettings ("Cors:AllowedOrigins"),
 // KHÔNG BAO GIỜ dùng AllowAnyOrigin() ở production (mục 5.2 — không wildcard "*").
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
@@ -83,6 +86,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors();
+app.UseRateLimiter(); // FR-OBS-003: Chặn brute-force trước khi vào endpoint xử lý
 app.UseStaticFiles(); // Phục vụ ảnh từ LocalFileStorageService (TODO: bỏ khi chuyển sang MinIO).
 
 app.UseAuthentication();

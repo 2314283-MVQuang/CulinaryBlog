@@ -21,14 +21,14 @@ public static class AuthEndpoints
         {
             var result = await sender.Send(command);
             return Results.Created("/api/v1/auth/me", new { data = result });
-        });
+        }).RequireRateLimiting(RateLimitingExtensions.AuthPolicyName);
 
         group.MapPost("/login", async (LoginRequest request, HttpContext http, ISender sender) =>
         {
             var command = new LoginCommand(request.Email, request.Password, http.Connection.RemoteIpAddress?.ToString());
             var result = await sender.Send(command);
             return result.ToOkResponse();
-        });
+        }).RequireRateLimiting(RateLimitingExtensions.AuthPolicyName);
 
         group.MapPost("/refresh", async (RefreshRequest request, HttpContext http, ISender sender) =>
         {
