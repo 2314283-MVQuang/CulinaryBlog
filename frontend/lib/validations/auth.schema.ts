@@ -11,16 +11,22 @@ const passwordSchema = z
   .regex(/[0-9]/, "Mật khẩu phải có ít nhất 1 chữ số")
   .regex(/[^A-Za-z0-9]/, "Mật khẩu phải có ít nhất 1 ký tự đặc biệt");
 
-/** Khớp body POST /auth/register (FR-AUTH-001). */
-export const registerSchema = z.object({
-  fullName: z.string().min(1, "Vui lòng nhập họ tên"),
-  email: z.string().email("Email không hợp lệ"),
-  userName: z
-    .string()
-    .min(3, "Tên đăng nhập tối thiểu 3 ký tự")
-    .regex(/^[a-zA-Z0-9_]+$/, "Tên đăng nhập chỉ gồm chữ, số và dấu gạch dưới"),
-  password: passwordSchema,
-});
+/** Khớp body POST /auth/register (FR-AUTH-001) + xác nhận mật khẩu 2 lần. */
+export const registerSchema = z
+  .object({
+    fullName: z.string().min(1, "Vui lòng nhập họ tên"),
+    email: z.string().email("Email không hợp lệ"),
+    userName: z
+      .string()
+      .min(3, "Tên đăng nhập tối thiểu 3 ký tự")
+      .regex(/^[a-zA-Z0-9_]+$/, "Tên đăng nhập chỉ gồm chữ, số và dấu gạch dưới"),
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, "Vui lòng xác nhận lại mật khẩu"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Mật khẩu xác nhận không khớp. Vui lòng nhập lại!",
+    path: ["confirmPassword"],
+  });
 export type RegisterFormValues = z.infer<typeof registerSchema>;
 
 /** Khớp body POST /auth/login (FR-AUTH-002). */
