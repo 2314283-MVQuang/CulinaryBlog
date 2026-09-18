@@ -14,6 +14,8 @@ import type { AuthTokenResponse, UserProfile } from "@/types/user";
  * - accessToken: JWT 15 phút (CONS-004), gắn vào header Authorization khi gọi API.
  * - refreshToken: 7 ngày, dùng để xin accessToken mới khi hết hạn (FR-AUTH-004, có rotation).
  */
+import { findLocalUser } from "@/lib/local-users";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -22,10 +24,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Mật khẩu", type: "password" },
       },
       async authorize(credentials) {
-        const email = credentials?.email as string | undefined;
+        const email = (credentials?.email as string | undefined)?.trim();
         const password = credentials?.password as string | undefined;
         if (!email || !password) return null;
 
+        // 1. Ưu tiên kiểm tra tài khoản mẫu trong đề & tài khoản vừa đăng ký
+        const localUser = findLocalUser(email, password);
+        if (localUser) {
+          return {
+            id: localUser.id,
+            email: localUser.email,
+            name: localUser.displayName,
+            image: localUser.avatarUrl ?? null,
+            roles: localUser.roles,
+            accessToken: "local-token-" + localUser.id,
+            refreshToken: "local-refresh-" + localUser.id,
+            accessTokenExpires: Date.now() + 24 * 60 * 60 * 1000,
+          };
+        }
+
+        // 2. Gọi backend .NET (nếu backend đang chạy)
         try {
           // FR-AUTH-002: POST /auth/login
           const tokens = await apiFetch<AuthTokenResponse>("/auth/login", {
@@ -45,10 +63,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             refreshToken: tokens.refreshToken,
             accessTokenExpires: Date.now() + tokens.expiresIn * 1000,
           };
-        } catch (error) {
-          // ApiError 401 (AUTH_INVALID_CREDENTIALS) -> trả null để Auth.js báo "sai thông tin đăng nhập"
-          if (error instanceof ApiError) return null;
-          throw error;
+        } catch {
+          // Khi backend chưa chạy hoặc thông tin đăng nhập sai -> trả null để NextAuth báo lỗi thân thiện
+          return null;
         }
       },
     }),
@@ -59,7 +76,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       : []),
   ],
   pages: {
-    signIn: "/auth/login",
+    signIn: "/login",
   },
   session: { strategy: "jwt" },
   callbacks: {

@@ -15,7 +15,7 @@ export default function LoginPage() {
       footer={
         <>
           Chưa có tài khoản?{" "}
-          <Link href="/auth/register" className="font-semibold text-brand-700 hover:underline">
+          <Link href="/register" className="font-semibold text-brand-700 hover:underline">
             Đăng ký ngay
           </Link>
         </>
