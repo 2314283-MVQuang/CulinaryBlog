@@ -181,7 +181,7 @@ export function Header() {
             </>
           ) : (
             <>
-              <Link href="/auth/login" className="hidden sm:block">
+              <Link href="/login" className="hidden sm:block">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -190,7 +190,7 @@ export function Header() {
                   Đăng nhập
                 </Button>
               </Link>
-              <Link href="/auth/register">
+              <Link href="/register">
                 <Button
                   size="sm"
                   className={cn(
