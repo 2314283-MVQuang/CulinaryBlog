@@ -1,6 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-
 export interface LocalUser {
   id: string;
   email: string;
@@ -11,9 +8,6 @@ export interface LocalUser {
   avatarUrl?: string;
   createdAt: string;
 }
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const USERS_FILE = path.join(DATA_DIR, "users.json");
 
 export const SEED_USERS: LocalUser[] = [
   {
@@ -36,20 +30,64 @@ export const SEED_USERS: LocalUser[] = [
   },
 ];
 
+let inMemoryUsers: LocalUser[] = [...SEED_USERS];
+
+function getNodeModules() {
+  if (typeof process !== "undefined" && process.versions && process.versions.node) {
+    try {
+      // Dùng eval("require") để Next.js / Webpack không cố bundle 'fs' vào Edge runtime (middleware)
+      const req = eval("require");
+      const fs = req("fs");
+      const path = req("path");
+      return { fs, path };
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function getUsersFilePath(): string | null {
+  const node = getNodeModules();
+  if (!node) return null;
+  const cwd = process.cwd();
+  const directPath = node.path.join(cwd, "data", "users.json");
+  const frontendPath = node.path.join(cwd, "frontend", "data", "users.json");
+
+  if (node.fs.existsSync(directPath)) return directPath;
+  if (node.fs.existsSync(frontendPath)) return frontendPath;
+
+  const targetDir = cwd.endsWith("frontend")
+    ? node.path.join(cwd, "data")
+    : node.path.join(cwd, "frontend", "data");
+
+  if (!node.fs.existsSync(targetDir)) {
+    node.fs.mkdirSync(targetDir, { recursive: true });
+  }
+  return node.path.join(targetDir, "users.json");
+}
+
 function ensureStorage(): LocalUser[] {
+  const node = getNodeModules();
+  if (!node) return inMemoryUsers;
+
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    const usersFile = getUsersFilePath();
+    if (!usersFile) return inMemoryUsers;
+
+    if (!node.fs.existsSync(usersFile)) {
+      node.fs.writeFileSync(usersFile, JSON.stringify(inMemoryUsers, null, 2), "utf8");
+      return inMemoryUsers;
     }
-    if (!fs.existsSync(USERS_FILE)) {
-      fs.writeFileSync(USERS_FILE, JSON.stringify(SEED_USERS, null, 2), "utf8");
-      return SEED_USERS;
-    }
-    const raw = fs.readFileSync(USERS_FILE, "utf8");
+    const raw = node.fs.readFileSync(usersFile, "utf8");
     const users = JSON.parse(raw) as LocalUser[];
-    return Array.isArray(users) && users.length > 0 ? users : SEED_USERS;
+    if (Array.isArray(users) && users.length > 0) {
+      inMemoryUsers = users;
+      return users;
+    }
+    return inMemoryUsers;
   } catch {
-    return SEED_USERS;
+    return inMemoryUsers;
   }
 }
 
@@ -57,53 +95,63 @@ export function getAllUsers(): LocalUser[] {
   return ensureStorage();
 }
 
-export function findLocalUser(email: string, password?: string): LocalUser | null {
+export function findLocalUser(identifier: string, password?: string): LocalUser | null {
   const users = ensureStorage();
-  const normalizedEmail = email.trim().toLowerCase();
-  const user = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+  const raw = identifier.trim().toLowerCase();
+
+  const user = users.find(
+    (u) => u.email.toLowerCase() === raw || u.userName.toLowerCase() === raw
+  );
 
   if (!user) return null;
-  if (password && user.password !== password) return null;
+  if (password !== undefined && user.password !== password) return null;
 
   return user;
 }
 
 export function registerLocalUser(userData: {
-  fullName: string;
-  email: string;
-  userName: string;
+  account: string;
   password: string;
+  fullName?: string;
 }): LocalUser {
   const users = ensureStorage();
-  const normalizedEmail = userData.email.trim().toLowerCase();
+  const rawAccount = userData.account.trim().toLowerCase();
 
   const existing = users.find(
-    (u) => u.email.toLowerCase() === normalizedEmail || u.userName.toLowerCase() === userData.userName.toLowerCase()
+    (u) => u.email.toLowerCase() === rawAccount || u.userName.toLowerCase() === rawAccount
   );
 
   if (existing) {
-    if (existing.email.toLowerCase() === normalizedEmail) {
-      throw new Error("Email này đã được đăng ký.");
-    }
-    throw new Error("Tên đăng nhập này đã được sử dụng.");
+    throw new Error("Tên tài khoản này đã được sử dụng. Vui lòng chọn tên khác!");
   }
 
+  const isEmail = rawAccount.includes("@");
+  const email = isEmail ? userData.account.trim() : `${userData.account.trim()}@culinaryblog.local`;
+  const userName = userData.account.trim();
+
   const newUser: LocalUser = {
-    id: crypto.randomUUID(),
-    email: userData.email.trim(),
+    id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    email: email,
     password: userData.password,
-    displayName: userData.fullName.trim(),
-    userName: userData.userName.trim(),
+    displayName: userData.fullName?.trim() || userName,
+    userName: userName,
     roles: ["Author"],
     createdAt: new Date().toISOString(),
   };
 
   users.push(newUser);
+  inMemoryUsers = users;
 
-  try {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
-  } catch (err) {
-    console.error("Lỗi lưu file users.json:", err);
+  const node = getNodeModules();
+  if (node) {
+    try {
+      const usersFile = getUsersFilePath();
+      if (usersFile) {
+        node.fs.writeFileSync(usersFile, JSON.stringify(users, null, 2), "utf8");
+      }
+    } catch (err) {
+      console.error("Lỗi lưu file users.json:", err);
+    }
   }
 
   return newUser;

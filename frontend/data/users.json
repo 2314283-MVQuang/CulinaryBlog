@@ -32,5 +32,16 @@
       "Author"
     ],
     "createdAt": "2026-09-18T04:40:16.427Z"
+  },
+  {
+    "id": "fcff2b9c-3bf2-4cd9-b0fa-c3827593a337",
+    "email": "2312@culinaryblog.local",
+    "password": "123",
+    "displayName": "2312",
+    "userName": "2312",
+    "roles": [
+      "Author"
+    ],
+    "createdAt": "2026-09-18T05:24:07.773Z"
   }
 ]
