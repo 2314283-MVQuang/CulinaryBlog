@@ -20,16 +20,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
+        account: { label: "Tài khoản", type: "text" },
+        email: { label: "Email", type: "text" },
         password: { label: "Mật khẩu", type: "password" },
       },
       async authorize(credentials) {
-        const email = (credentials?.email as string | undefined)?.trim();
+        const identifier = (
+          (credentials?.account as string | undefined) ||
+          (credentials?.email as string | undefined)
+        )?.trim();
         const password = credentials?.password as string | undefined;
-        if (!email || !password) return null;
+        if (!identifier || !password) return null;
 
-        // 1. Ưu tiên kiểm tra tài khoản mẫu trong đề & tài khoản vừa đăng ký
-        const localUser = findLocalUser(email, password);
+        // 1. Ưu tiên kiểm tra tài khoản mẫu trong đề & tài khoản vừa đăng ký (2312, admin, author...)
+        const localUser = findLocalUser(identifier, password);
         if (localUser) {
           return {
             id: localUser.id,
@@ -48,7 +52,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // FR-AUTH-002: POST /auth/login
           const tokens = await apiFetch<AuthTokenResponse>("/auth/login", {
             method: "POST",
-            body: { email, password },
+            body: { email: identifier, password },
           });
           // Lấy hồ sơ user để hiển thị tên/avatar mà không cần gọi thêm lần nữa ở client.
           const profile = await apiFetch<UserProfile>("/auth/me", { token: tokens.accessToken });
