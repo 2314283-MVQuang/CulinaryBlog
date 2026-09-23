@@ -9,6 +9,7 @@ using CulinaryBlog.Infrastructure.Persistence;
 using CulinaryBlog.Infrastructure.Persistence.Seed;
 using CulinaryBlog.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
@@ -77,6 +78,16 @@ var app = builder.Build();
 // ---------------------------------------------------------------------------
 app.UseMiddleware<GlobalExceptionMiddleware>(); // Phải đứng ĐẦU pipeline để bắt mọi exception phía sau.
 
+// Đảm bảo role "Admin"/"Author" tồn tại TRƯỚC KHI nhận request nào — RegisterCommandHandler ném
+// InvalidOperationException (-> 500) nếu role chưa có (xem RoleSeeder.cs). Chạy ở MỌI môi trường
+// (không bọc trong "if IsDevelopment" như DbSeeder bên dưới), vì đây là dữ liệu hệ thống bắt buộc
+// chứ không phải dữ liệu demo — thiếu nó thì /auth/register hỏng bất kể môi trường nào.
+using (var roleSeedScope = app.Services.CreateScope())
+{
+    var roleManager = roleSeedScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    await RoleSeeder.SeedAsync(roleManager, app.Logger);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -102,5 +113,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthEndpoints();
+app.MapRecipesEndpoints(); // FR-RCP-001/002/003 (mục 6.3) — xem CulinaryBlog.API/Endpoints/RecipesEndpoints.cs.
 
 app.Run();
