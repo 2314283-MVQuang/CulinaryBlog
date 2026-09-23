@@ -16,6 +16,12 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
     <!-- Scalar UI tại /scalar (mục 6.2) — thay thế Swagger UI cổ điển. -->
     <PackageReference Include="Scalar.AspNetCore" Version="2.0.8" />
+    <!-- "dotnet ef" cần thấy gói này ở chính STARTUP project (API), không chỉ ở Infrastructure —
+         nếu không sẽ báo lỗi "doesn't reference Microsoft.EntityFrameworkCore.Design". -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
