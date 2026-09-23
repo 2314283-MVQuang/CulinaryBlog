@@ -21,6 +21,9 @@
     <!-- Dùng để sinh dữ liệu mẫu ngẫu nhiên cho môi trường dev (xem Persistence/Seed/DbSeeder.cs) —
          theo đúng mục 4.4 tài liệu hướng dẫn ("Dữ liệu test/seed: dùng thư viện Bogus"). -->
     <PackageReference Include="Bogus" Version="35.6.1" />
+    <!-- FR-AUTH-003: verify idToken từ Google Sign-In JS SDK (GoogleJsonWebSignature.ValidateAsync) —
+         xem Services/GoogleAuthService.cs. -->
+    <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
   </ItemGroup>
 
   <ItemGroup>

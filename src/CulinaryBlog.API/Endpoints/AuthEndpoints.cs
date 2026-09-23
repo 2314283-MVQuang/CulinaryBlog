@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CulinaryBlog.API.Extensions;
+using CulinaryBlog.Application.Features.Auth.Commands.GoogleLogin;
 using CulinaryBlog.Application.Features.Auth.Commands.Login;
 using CulinaryBlog.Application.Features.Auth.Commands.Logout;
 using CulinaryBlog.Application.Features.Auth.Commands.Refresh;
@@ -10,7 +11,7 @@ using MediatR;
 
 namespace CulinaryBlog.API.Endpoints;
 
-/// <summary>Mục 8.1. TODO (nhóm làm tiếp): /auth/google (FR-AUTH-003) chưa triển khai.</summary>
+/// <summary>Mục 8.1.</summary>
 public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
@@ -26,6 +27,16 @@ public static class AuthEndpoints
         group.MapPost("/login", async (LoginRequest request, HttpContext http, ISender sender) =>
         {
             var command = new LoginCommand(request.Email, request.Password, http.Connection.RemoteIpAddress?.ToString());
+            var result = await sender.Send(command);
+            return result.ToOkResponse();
+        });
+
+        // FR-AUTH-003 — Guest gửi idToken lấy từ Google Sign-In JS SDK (FE chịu trách nhiệm hiển thị
+        // nút đăng nhập Google và lấy idToken); BE chỉ verify + tạo/đăng nhập user, trả AuthResponseDto
+        // giống hệt /login để FE dùng chung 1 luồng lưu token.
+        group.MapPost("/google", async (GoogleLoginRequest request, HttpContext http, ISender sender) =>
+        {
+            var command = new GoogleLoginCommand(request.IdToken, http.Connection.RemoteIpAddress?.ToString());
             var result = await sender.Send(command);
             return result.ToOkResponse();
         });
@@ -65,6 +76,8 @@ public static class AuthEndpoints
     }
 
     private record LoginRequest(string Email, string Password);
+
+    private record GoogleLoginRequest(string IdToken);
 
     private record RefreshRequest(string RefreshToken);
 

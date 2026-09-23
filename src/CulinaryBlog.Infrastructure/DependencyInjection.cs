@@ -65,6 +65,11 @@ public static class DependencyInjection
         // IFileStorageService đã gỡ cùng module Recipe (upload ảnh công thức, không thuộc FR-AUTH).
         services.AddScoped<IEmailService, ConsoleEmailService>();
 
+        // --- Google OAuth (FR-AUTH-003): verify idToken từ Google Sign-In JS SDK phía client ---
+        // Google:ClientId lấy từ appsettings.json (không phải secret — xem GoogleAuthOptions).
+        services.Configure<GoogleAuthOptions>(configuration.GetSection(GoogleAuthOptions.SectionName));
+        services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+
         return services;
     }
 }
