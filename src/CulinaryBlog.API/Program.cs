@@ -5,6 +5,8 @@ using CulinaryBlog.API.Extensions;
 using CulinaryBlog.API.Middleware;
 using CulinaryBlog.Application;
 using CulinaryBlog.Infrastructure;
+using CulinaryBlog.Infrastructure.Persistence;
+using CulinaryBlog.Infrastructure.Persistence.Seed;
 using CulinaryBlog.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -79,6 +81,16 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference(); // UI tại /scalar (mục 6.2), thay Swagger UI.
+
+    // Sinh dữ liệu mẫu ngẫu nhiên bằng Bogus (chỉ ở Development, KHÔNG bao giờ chạy ở production).
+    // DbSeeder tự kiểm tra số lượng hiện có và chỉ chèn thêm cho tới khi đạt tối thiểu 20
+    // categories / 100 recipes (mỗi recipe >= 10 nguyên liệu, >= 5 bước) — xem
+    // Infrastructure/Persistence/Seed/DbSeeder.cs. An toàn khi chạy lại nhiều lần.
+    using (var seedScope = app.Services.CreateScope())
+    {
+        var seedContext = seedScope.ServiceProvider.GetRequiredService<CulinaryBlogDbContext>();
+        await DbSeeder.SeedRandomDataAsync(seedContext, app.Logger);
+    }
 }
 
 app.UseHttpsRedirection();
