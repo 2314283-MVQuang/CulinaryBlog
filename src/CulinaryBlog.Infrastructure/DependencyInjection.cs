@@ -24,13 +24,14 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CulinaryBlogDbContext>());
 
         // --- Repositories ---
-        services.AddScoped<ICategoryRepository, CategoryRepository>();
-        services.AddScoped<IRecipeRepository, RecipeRepository>();
+        // CHỈ giữ lại những gì FR-AUTH cần. ICategoryRepository/IRecipeRepository đã gỡ cùng module
+        // Category/Recipe (xem ghi chú trong Program.cs) — sẽ đăng ký lại khi nhóm triển khai tiếp.
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         // Repository generic cho các entity con (RecipeStep/RecipeIngredient/RecipeImage): Handler
         // chỉ cần Remove()/AddAsync() một dòng con nên không đáng viết repository chuyên biệt cho
-        // từng loại. Đăng ký open generic: xin IRepository<RecipeStep> sẽ nhận RepositoryBase<RecipeStep>.
+        // từng loại. Đăng ký open generic: xin IRepository<T> sẽ nhận RepositoryBase<T>. Giữ lại vì
+        // là hạ tầng dùng chung, không gắn riêng với module nào.
         services.AddScoped(typeof(IRepository<>), typeof(RepositoryBase<>));
 
         // --- ASP.NET Core Identity (CONS-004: PBKDF2, mục 5.2: policy mật khẩu + khóa 5 lần sai) ---
@@ -60,8 +61,8 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUserService>();
 
-        // --- File storage & Email: xem ghi chú TODO trong từng file, sẽ đổi sang MinIO/SMTP thật sau ---
-        services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        // --- Email: FR-AUTH-001 (Register) gửi email chào mừng qua service này ---
+        // IFileStorageService đã gỡ cùng module Recipe (upload ảnh công thức, không thuộc FR-AUTH).
         services.AddScoped<IEmailService, ConsoleEmailService>();
 
         return services;

@@ -86,6 +86,8 @@ if (app.Environment.IsDevelopment())
     // DbSeeder tự kiểm tra số lượng hiện có và chỉ chèn thêm cho tới khi đạt tối thiểu 20
     // categories / 100 recipes (mỗi recipe >= 10 nguyên liệu, >= 5 bước) — xem
     // Infrastructure/Persistence/Seed/DbSeeder.cs. An toàn khi chạy lại nhiều lần.
+    // GIỮ LẠI theo yêu cầu Lab: đảm bảo database luôn có đủ dữ liệu mẫu, dù các module CRUD
+    // Category/Recipe (FR-CAT, FR-RCP...) đã tạm gỡ khỏi phạm vi triển khai để phân công lại.
     using (var seedScope = app.Services.CreateScope())
     {
         var seedContext = seedScope.ServiceProvider.GetRequiredService<CulinaryBlogDbContext>();
@@ -95,17 +97,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors();
-app.UseStaticFiles(); // Phục vụ ảnh từ LocalFileStorageService (TODO: bỏ khi chuyển sang MinIO).
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-// FR-OBS-001: TODO (nhóm làm tiếp) — thay bằng health check thật (DB + Redis + MinIO) qua
-// AspNetCore.HealthChecks.NpgSql/Redis/Minio khi tích hợp các service đó.
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).WithTags("Health");
-
 app.MapAuthEndpoints();
-app.MapCategoriesEndpoints();
-app.MapRecipesEndpoints();
 
 app.Run();
