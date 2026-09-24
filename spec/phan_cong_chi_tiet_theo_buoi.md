@@ -1,6 +1,6 @@
-# 📝 Phân công Công việc Chi tiết theo Buổi — Culinary Blog
+# 📝 Phân công Công việc Chi tiết theo Tuần — Culinary Blog
 
-> Tài liệu này triển khai chi tiết hơn Mục 6 của `project_readme.md`: mỗi **Tuần** được chia thành **2 buổi làm việc**. Với mỗi buổi, mỗi thành viên biết rõ: **làm chức năng nào** (mã FR), **hướng đi / cách làm** ra sao, và **kết quả cụ thể** cần đạt được khi làm xong (để tự kiểm tra trước khi báo cáo nhóm).
+> Tài liệu này triển khai chi tiết hơn Mục 7 của `README.md`, chia theo **Tuần** (giống định dạng bảng phân công gốc). Với mỗi tuần, mỗi thành viên biết rõ: **làm chức năng nào** (mã FR), **hướng đi / cách làm** ra sao, và **kết quả cụ thể** cần đạt được khi làm xong (để tự kiểm tra trước khi báo cáo nhóm).
 
 ---
 
@@ -17,7 +17,7 @@
 | Nguyễn Ngọc Bảo Thịnh | Tham gia họp; xác nhận FR mình nhận | Đối chiếu FR đã nhận (AUTH-005/006, CAT-003, RCP-002/007/008, SRCH-003, FILE-002, OBS-002) | Biết chắc chắn tuần nào mình làm FR nào |
 | Hồ Quốc Tiến | Tham gia họp; xác nhận FR mình nhận | Đối chiếu FR đã nhận (AUTH-007, CAT-004, RCP-004/010, SRCH-004, FILE-001, JOB-002/003, OBS-003) | Biết chắc chắn tuần nào mình làm FR nào |
 
-## 📅 Tuần 2 — Module Xác thực & Người dùng (FR-AUTH) ✅ Xong
+## 📅 Tuần 2 — Module Xác thực & Người dùng (FR-AUTH-001, FR-AUTH-002) ✅ Xong
 
 | Thành viên | Chức năng | Hướng đi | Kết quả khi hoàn thành | Trạng thái |
 | :--- | :--- | :--- | :--- | :-: |
@@ -28,12 +28,7 @@
 | Mai Văn Quang | Đảm bảo CSDL có dữ liệu ngẫu nhiên đủ yêu cầu | Chạy seeder rồi kiểm tra bằng `psql`/pgAdmin: đếm số dòng Categories/Recipes, dùng `GROUP BY`/`HAVING` để kiểm tra số ingredient/step từng recipe | CSDL có **≥ 20 categories**, **≥ 100 recipes**, mỗi recipe có **≥ 10 nguyên liệu** và **≥ 5 bước chế biến** — đủ điều kiện tối thiểu Lab 2 | ✅ Đã hoàn thành |
 | Mai Văn Quang | **FR-AUTH-001** Đăng ký tài khoản | Viết `RegisterCommand` (MediatR) + `RegisterCommandValidator` (FluentValidation) kiểm tra email trùng, độ mạnh mật khẩu; dùng `UserManager.CreateAsync` (Identity tự hash PBKDF2) | `POST /auth/register` tạo được user mới, trả 201 kèm thông tin user (không có password); gọi lại với email đã tồn tại trả lỗi rõ ràng | ✅ Đã hoàn thành |
 | Mai Văn Quang | **FR-AUTH-002** Đăng nhập email/mật khẩu | `LoginCommand` dùng `SignInManager.CheckPasswordSignInAsync`; phát JWT HS256 (claim userId/email/roles/jti, TTL 15p) + Refresh Token (random 128-bit, hash SHA-256 lưu DB, TTL 7 ngày) | `POST /auth/login` trả `{accessToken, refreshToken}` khi đúng thông tin; trả 401 khi sai email/mật khẩu | ✅ Đã hoàn thành |
-| Chung Thiện Ý | **FR-AUTH-003** Đăng nhập Google OAuth | Cấu hình Auth.js v5 ở frontend (Authorization Code Flow + PKCE với Google provider); backend thêm endpoint nhận `{email, displayName, avatarUrl, providerKey}`, tạo/liên kết `ApplicationUser` nếu chưa có | Người dùng bấm "Đăng nhập với Google" → đăng nhập thành công, nhận JWT giống luồng thường; lần sau đăng nhập lại tự liên kết đúng tài khoản cũ | ✅ Đã hoàn thành |
-| Chung Thiện Ý | **FR-AUTH-004** Làm mới Access Token (refresh + rotation) | `RefreshTokenCommand`: kiểm tra token còn hiệu lực trong DB → revoke token cũ, cấp token mới; nếu token đã revoke bị dùng lại → revoke toàn bộ "family" của user (Reuse Detection) | `POST /auth/refresh` luôn trả access token mới khi refresh token hợp lệ; dùng lại refresh token cũ sau khi đã refresh sẽ bị từ chối toàn bộ | ✅ Đã hoàn thành |
-| Nguyễn Ngọc Bảo Thịnh | **FR-AUTH-005** Đăng xuất | `LogoutCommand` tìm refresh token theo id, set revoke trong DB | `POST /auth/logout` xong thì refresh token cũ không dùng để lấy access token mới được nữa | ✅ Đã hoàn thành |
-| Nguyễn Ngọc Bảo Thịnh | **FR-AUTH-006** Xem hồ sơ cá nhân (GET /auth/me) | `GetProfileQuery` lấy `ApplicationUser` theo `userId` trong JWT claim, map sang `UserProfileDto` | `GET /auth/me` (kèm access token) trả đúng `{id, email, displayName, avatarUrl, bio, roles, emailConfirmed, createdAt}` của người đang đăng nhập | ✅ Đã hoàn thành |
-| Hồ Quốc Tiến | **FR-AUTH-007** Cập nhật hồ sơ (PATCH /auth/me) | `UpdateProfileCommand` + validator cho phép sửa `displayName`/`avatarUrl`/`bio`; không cho sửa email/role qua endpoint này | `PATCH /auth/me` cập nhật thành công, gọi lại `GET /auth/me` thấy dữ liệu mới; không thể tự đổi email hoặc role của mình | ✅ Đã hoàn thành |
-| Cả nhóm | Kiểm thử luồng Auth end-to-end | Test thủ công (Postman/Scalar): đăng ký → đăng nhập → refresh → xem/sửa hồ sơ → đăng xuất | Toàn bộ 7 FR-AUTH hoạt động thông suốt, sẵn sàng làm nền cho các module khác (AuthorId của Recipe, phân quyền Category...) | ✅ Đã hoàn thành |
+| Mai Văn Quang | Kiểm thử luồng Auth end-to-end | Test thủ công (Postman/Scalar): đăng ký → đăng nhập đúng mật khẩu → đăng nhập sai mật khẩu → đăng ký lại email đã tồn tại | FR-AUTH-001/002 hoạt động thông suốt, sẵn sàng làm nền JWT cho các phần còn lại | ✅ Đã hoàn thành |
 
 ## 📅 Tuần 3 — Module Quản lý Danh mục (FR-CAT)
 

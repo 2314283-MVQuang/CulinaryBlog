@@ -1,5 +1,7 @@
 # 🍲 Culinary Blog - Dự án Phát triển Ứng dụng Web Nâng cao
 
+> ⚠️ **Cập nhật phạm vi (mới nhất):** nhóm đã **gỡ bỏ code của các module Category, Recipe, Search, File, Job** khỏi source để làm gọn đúng yêu cầu tối thiểu Lab 2, **chỉ giữ lại module FR-AUTH** (đã hoàn thành) cùng khung dự án Clean Architecture. Toàn bộ nội dung Mục 4–7 dưới đây (mâu thuẫn SRS, FR/NFR, phân công theo buổi) vẫn được giữ lại làm **tài liệu tham khảo/kế hoạch gốc** — riêng phần **Buổi 3–8** (Category/Recipe/Search/File/Job) hiện **chưa khớp với code thật**, sẽ được nhóm phân công lại và cập nhật SPEC sau.
+
 ## 📑 Mục lục
 1. [Tổng quan Dự án & Nhóm thực hiện](#sec-1)
 2. [Kiến trúc Hệ thống & Công nghệ](#sec-2)
@@ -249,27 +251,25 @@ Quá trình phát triển dự án kéo dài **8 buổi**: Buổi 1–2 cả nh�
 
 ---
 
-### Buổi 2 — Module Xác thực & Người dùng (FR-AUTH, 7 FR) ✅ Xong
+### Buổi 2 — Module Xác thực & Người dùng (FR-AUTH-001, FR-AUTH-002) ✅ Xong
 
 #### Yêu cầu tối thiểu Lab 2 (giáo viên) — Nền tảng Backend
 
 | # | Yêu cầu (giáo viên) | Người phụ trách | Cách làm / Hướng dẫn triển khai | Trạng thái |
 | :-: | :--- | :-: | :--- | :-: |
-| 1 | Hoàn thành tạo cấu trúc dự án backend theo Clean Architecture | Cả Nhóm | Tạo 4 project trong solution: **Domain** (entities/enums, không phụ thuộc layer khác), **Application** (CQRS commands/queries, interfaces, DTOs — chỉ phụ thuộc Domain), **Infrastructure** (EF Core, Identity, Redis, MinIO — implement interface của Application), **Presentation/API** (Minimal API endpoints, DI). Tuân thủ dependency rule của NFR-MAINT-004. | ✅ Đã hoàn thành |
-| 2 | Hoàn thành cài đặt các gói thư viện cần thiết | Cả Nhóm | Cài `MediatR`, `FluentValidation`, `Microsoft.EntityFrameworkCore` + `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.AspNetCore.Identity.EntityFrameworkCore`, `Serilog.AspNetCore` + `Serilog.Sinks.Seq`, `Hangfire.Core/AspNetCore/PostgreSql`, `AWSSDK.S3` (cho MinIO), `Bogus` (sinh dữ liệu giả), `Scalar`/Swashbuckle cho API docs. | ✅ Đã hoàn thành |
-| 3 | Hoàn thành việc cài đặt các lớp entities, configuration, dbcontext | Cả Nhóm | Viết entity (`ApplicationUser`, `Category`, `Recipe`, `RecipeStep`, `RecipeIngredient`, `RefreshToken`...); mỗi entity có `IEntityTypeConfiguration<T>` riêng (Fluent API: khóa ngoại, index, ràng buộc unique cho slug); `AppDbContext` kế thừa `IdentityDbContext`, đăng ký configuration qua `ApplyConfigurationsFromAssembly`. | ✅ Đã hoàn thành |
-| 4 | Hoàn thành việc tạo migration, cài đặt các lớp để tạo dữ liệu ngẫu nhiên | Cả Nhóm | Chạy `dotnet ef migrations add InitialCreate` rồi `dotnet ef database update`; viết `DataSeeder`/`FakeDataGenerator` dùng `Bogus` để sinh dữ liệu giả cho Category, Recipe, RecipeIngredient, RecipeStep. | ✅ Đã hoàn thành |
-| 5 | Đảm bảo CSDL có dữ liệu ngẫu nhiên: ≥ 20 categories, ≥ 100 recipes (mỗi recipe ≥ 10 nguyên liệu, ≥ 5 bước chế biến) | Cả Nhóm | Chạy seeder rồi kiểm tra bằng `psql`/pgAdmin: `SELECT COUNT(*) FROM "Categories"` (≥ 20), `SELECT COUNT(*) FROM "Recipes"` (≥ 100), và `GROUP BY`/`HAVING COUNT(*) < 10` trên `RecipeIngredients`, `< 5` trên `RecipeSteps` để đảm bảo không có recipe nào thiếu dữ liệu. | ✅ Đã hoàn thành |
+| 1 | Hoàn thành tạo cấu trúc dự án backend theo Clean Architecture | Quang | Tạo 4 project trong solution: **Domain** (entities/enums, không phụ thuộc layer khác), **Application** (CQRS commands/queries, interfaces, DTOs — chỉ phụ thuộc Domain), **Infrastructure** (EF Core, Identity, Redis, MinIO — implement interface của Application), **Presentation/API** (Minimal API endpoints, DI). Tuân thủ dependency rule của NFR-MAINT-004. | ✅ Đã hoàn thành |
+| 2 | Hoàn thành cài đặt các gói thư viện cần thiết | Quang | Cài `MediatR`, `FluentValidation`, `Microsoft.EntityFrameworkCore` + `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.AspNetCore.Identity.EntityFrameworkCore`, `Serilog.AspNetCore` + `Serilog.Sinks.Seq`, `Hangfire.Core/AspNetCore/PostgreSql`, `AWSSDK.S3` (cho MinIO), `Bogus` (sinh dữ liệu giả), `Scalar`/Swashbuckle cho API docs. | ✅ Đã hoàn thành |
+| 3 | Hoàn thành việc cài đặt các lớp entities, configuration, dbcontext | Quang | Viết entity (`ApplicationUser`, `Category`, `Recipe`, `RecipeStep`, `RecipeIngredient`, `RefreshToken`...); mỗi entity có `IEntityTypeConfiguration<T>` riêng (Fluent API: khóa ngoại, index, ràng buộc unique cho slug); `AppDbContext` kế thừa `IdentityDbContext`, đăng ký configuration qua `ApplyConfigurationsFromAssembly`. | ✅ Đã hoàn thành |
+| 4 | Hoàn thành việc tạo migration, cài đặt các lớp để tạo dữ liệu ngẫu nhiên | Quang | Chạy `dotnet ef migrations add InitialCreate` rồi `dotnet ef database update`; viết `DataSeeder`/`FakeDataGenerator` dùng `Bogus` để sinh dữ liệu giả cho Category, Recipe, RecipeIngredient, RecipeStep. | ✅ Đã hoàn thành |
+| 5 | Đảm bảo CSDL có dữ liệu ngẫu nhiên: ≥ 20 categories, ≥ 100 recipes (mỗi recipe ≥ 10 nguyên liệu, ≥ 5 bước chế biến) | Quang | Chạy seeder rồi kiểm tra bằng `psql`/pgAdmin: `SELECT COUNT(*) FROM "Categories"` (≥ 20), `SELECT COUNT(*) FROM "Recipes"` (≥ 100), và `GROUP BY`/`HAVING COUNT(*) < 10` trên `RecipeIngredients`, `< 5` trên `RecipeSteps` để đảm bảo không có recipe nào thiếu dữ liệu. | ✅ Đã hoàn thành |
 
 #### Module FR-AUTH
 
-**Mục tiêu:** có đủ đường vào hệ thống (email/mật khẩu lẫn Google), người dùng xem/sửa được hồ sơ, và mọi FR từ Buổi 3 trở đi đều dựa được vào JWT phát ra từ đây.
+**Mục tiêu:** có đủ đường vào hệ thống (đăng ký/đăng nhập email + mật khẩu), sẵn sàng để làm nền JWT cho các phần còn lại.
 
 **Tiến trình trong buổi:**
-1. Quang dựng trước `RegisterCommand`/`LoginCommand` và `IJwtTokenGenerator` — mọi người còn lại cần JWT hợp lệ để tự test FR của mình.
-2. Thiện Ý làm song song FR-AUTH-003/004, áp dụng nghị quyết **MT-08** (Authorization Code + PKCE) và **MT-11** (`RefreshToken` không kế thừa `BaseEntity`).
-3. Bảo Thịnh & Quốc Tiến chờ `UserProfileDto` (theo **MT-09**) chốt xong mới viết FR-AUTH-006/007, tránh sửa lại DTO hai lần.
-4. Cuối buổi: gộp nhánh theo thứ tự Quang → Thiện Ý → Bảo Thịnh → Quốc Tiến, chạy thử trọn luồng đăng ký → đăng nhập → Google → refresh → xem/sửa hồ sơ → đăng xuất.
+1. Quang dựng `RegisterCommand`/`LoginCommand` và `IJwtTokenGenerator`.
+2. Áp nghị quyết **MT-09** chuẩn hóa `UserProfileDto`/`displayName` trước khi viết các FR còn lại của module (tránh phải sửa DTO nhiều lần về sau).
 
 **Commit nền — Mai Văn Quang dẫn · MT-09 (chuẩn hóa `UserProfileDto`/`displayName`)**
 
@@ -291,37 +291,7 @@ Quá trình phát triển dự án kéo dài **8 buổi**: Buổi 1–2 cả nh�
 
 - **Commit:** `feat(auth): implement FR-AUTH-001 register and FR-AUTH-002 login with JWT issuance`
 
-**Chung Thiện Ý · FR-AUTH-003 Google OAuth + FR-AUTH-004 Refresh Token**
-
-- **Cách làm:** Áp MT-08: cấu hình Auth.js v5 ở frontend theo Authorization Code Flow + PKCE (không dùng flow chỉ gửi `idToken` như bản SRS gốc). `GoogleLoginCommand` nhận `{email, displayName, avatarUrl, providerKey}` từ frontend; handler gọi `UserManager.FindByEmailAsync` — có thì liên kết tài khoản, chưa có thì `CreateAsync` user mới với role mặc định Author. `RefreshTokenCommand`: tìm token theo hash, còn hiệu lực thì revoke ngay và cấp token mới (Rotation, NFR-SEC-002); token đã bị revoke mà vẫn được gửi lên → revoke toàn bộ các refresh token khác của user (Reuse Detection — dấu hiệu token bị đánh cắp). Áp MT-11 khi thiết kế bảng `RefreshTokens`: không kế thừa `BaseEntity` (không có `IsDeleted`/`UpdatedAt`/`RowVersion`) vì đây là bản ghi audit append-only, chỉ có thêm cột `RevokedAt`.
-
-- **Vì sao:** PKCE giữ bí mật OAuth ở phía server thay vì để lộ ở SPA; Reuse Detection là lớp phòng vệ bắt buộc theo NFR-SEC-002 — thiếu nó thì kẻ đánh cắp 1 refresh token cũ vẫn dùng được vô thời hạn.
-
-- **Xong khi:** đăng nhập Google tạo/liên kết đúng tài khoản; gọi lại `/auth/refresh` với token đã dùng bị từ chối toàn bộ family, không chỉ riêng token đó.
-
-- **Commit:** `feat(auth): implement FR-AUTH-003 google oauth (authorization code + pkce) and FR-AUTH-004 refresh token rotation`
-
-**Nguyễn Ngọc Bảo Thịnh · FR-AUTH-005 Đăng xuất + FR-AUTH-006 Xem hồ sơ**
-
-- **Cách làm:** `LogoutCommand`: tìm refresh token theo id trong request, set `RevokedAt = now`; không tìm thấy vẫn trả 204 (không để endpoint lộ thông tin token nào tồn tại). `GetProfileQuery`: lấy `userId` từ JWT claim, `UserManager.FindByIdAsync`, map sang `UserProfileDto` (theo MT-09). Endpoint: `POST /auth/logout` (204), `GET /auth/me` (200 kèm `UserProfileDto`, 401 nếu chưa đăng nhập).
-
-- **Vì sao:** luôn trả 204 dù không tìm thấy token để endpoint không trở thành công cụ dò xem token nào còn hiệu lực trong hệ thống.
-
-- **Xong khi:** đăng xuất xong thì refresh token cũ không dùng lại được; `GET /auth/me` trả đúng thông tin người đang đăng nhập.
-
-- **Commit:** `feat(auth): implement FR-AUTH-005 logout revocation and FR-AUTH-006 profile retrieval`
-
-**Hồ Quốc Tiến · FR-AUTH-007 Cập nhật hồ sơ**
-
-- **Cách làm:** `UpdateProfileCommand { displayName?, avatarUrl?, bio? }` + `UpdateProfileCommandValidator`: `displayName` 2–100 ký tự, `avatarUrl` phải là URL hợp lệ nếu có, `bio` ≤ 500 ký tự. Handler chỉ nhận 3 field trên — cố tình không nhận `email`/`roles` để không ai lỡ tự nâng quyền qua endpoint này. Endpoint: `PATCH /auth/me` trả `UserProfileDto` đã cập nhật.
-
-- **Vì sao:** tách rõ "đổi thông tin hiển thị" khỏi "đổi quyền/đổi email" (hai việc có mức rủi ro rất khác nhau) ngay từ đầu để không phải vá lỗ hổng leo thang quyền về sau.
-
-- **Xong khi:** cập nhật hồ sơ thành công, gọi lại `GET /auth/me` thấy dữ liệu mới; gửi kèm `roles` trong body không có tác dụng gì (bị bỏ qua).
-
-- **Commit:** `feat(auth): implement FR-AUTH-007 profile update (displayName/avatarUrl/bio only)`
-
-**Kiểm chứng cuối Buổi 2:** đăng ký → đăng nhập → đăng nhập lại bằng Google (cùng email) tự liên kết đúng 1 tài khoản; refresh token dùng lại lần 2 bị từ chối toàn bộ family; response của `GET`/`PATCH /auth/me` không còn field `fullName`/`userName`.
+**Kiểm chứng cuối Buổi 2:** đăng ký tài khoản mới thành công, trả về `UserProfileDto` không có password; đăng nhập đúng mật khẩu nhận được `{accessToken, refreshToken}`; đăng nhập sai mật khẩu trả đúng 401; đăng ký lại email đã tồn tại trả lỗi rõ ràng (không phải 500).
 
 ---
 
