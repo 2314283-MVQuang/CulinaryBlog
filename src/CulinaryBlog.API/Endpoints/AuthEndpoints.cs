@@ -6,11 +6,12 @@ using CulinaryBlog.Application.Features.Auth.Commands.Refresh;
 using CulinaryBlog.Application.Features.Auth.Commands.Register;
 using CulinaryBlog.Application.Features.Auth.Commands.UpdateProfile;
 using CulinaryBlog.Application.Features.Auth.Queries.Me;
+using CulinaryBlog.Application.Features.Auth.Commands.GoogleLogin;
 using MediatR;
 
 namespace CulinaryBlog.API.Endpoints;
 
-/// <summary>Mục 8.1. TODO (nhóm làm tiếp): /auth/google (FR-AUTH-003) chưa triển khai.</summary>
+/// <summary>Mục 8.1. FR-AUTH-003 (Google OAuth) đã triển khai — xem route /google bên dưới.</summary>
 public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
@@ -33,6 +34,13 @@ public static class AuthEndpoints
         group.MapPost("/refresh", async (RefreshRequest request, HttpContext http, ISender sender) =>
         {
             var command = new RefreshTokenCommand(request.RefreshToken, http.Connection.RemoteIpAddress?.ToString());
+            var result = await sender.Send(command);
+            return result.ToOkResponse();
+        });
+
+       group.MapPost("/google", async (GoogleRequest request, HttpContext http, ISender sender) =>
+        {
+            var command = new GoogleLoginCommand(request.IdToken, http.Connection.RemoteIpAddress?.ToString());
             var result = await sender.Send(command);
             return result.ToOkResponse();
         });
@@ -67,6 +75,7 @@ public static class AuthEndpoints
     private record LoginRequest(string Email, string Password);
 
     private record RefreshRequest(string RefreshToken);
+    private record GoogleRequest(string IdToken);
 
     /// <summary>Body cho PATCH /auth/me — KHÔNG có UserId (chống sửa hồ sơ người khác).</summary>
     private record UpdateProfileRequest(string? DisplayName, string? AvatarUrl, string? Bio);

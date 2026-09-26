@@ -60,6 +60,8 @@ public static class DependencyInjection
         services.AddScoped<IJwtService, JwtService>();
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUserService>();
+        services.Configure<GoogleOptions>(configuration.GetSection(GoogleOptions.SectionName));
+        services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 
         // --- Email: FR-AUTH-001 (Register) gửi email chào mừng qua service này ---
         // IFileStorageService đã gỡ cùng module Recipe (upload ảnh công thức, không thuộc FR-AUTH).
