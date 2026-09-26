@@ -64,6 +64,14 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddOpenApi();
 
+// TODO (nhóm làm tiếp — MT-03/04): hiện dùng in-memory store vì Redis chưa được dựng
+// (xem docker-compose.yml). Khi nhóm thêm Redis, chỉ cần đổi cấu hình store ở đây —
+// code Handler/Endpoint của Category KHÔNG cần sửa gì.
+builder.Services.AddOutputCache(options =>
+{
+    options.AddPolicy("categories", policy => policy.Expire(TimeSpan.FromMinutes(30)));
+});
+
 // Cho phép body JSON gửi/nhận enum dạng chuỗi (vd "Easy" thay vì số 1) — dễ đọc hơn khi test API.
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -100,7 +108,9 @@ app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseOutputCache();
 
 app.MapAuthEndpoints();
+app.MapCategoryEndpoints();
 
 app.Run();
